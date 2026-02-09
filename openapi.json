@@ -1,0 +1,3430 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "API Documentation",
+    "version" : "1.0"
+  },
+  "paths" : {
+    "/api/auth/register" : {
+      "post" : {
+        "summary" : "用户注册",
+        "description" : "用户注册",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "email", "password", "username" ],
+                "type" : "object",
+                "properties" : {
+                  "username" : {
+                    "maxLength" : 32,
+                    "minLength" : 3,
+                    "type" : "string",
+                    "description" : ""
+                  },
+                  "password" : {
+                    "maxLength" : 64,
+                    "minLength" : 6,
+                    "type" : "string",
+                    "description" : ""
+                  },
+                  "email" : {
+                    "type" : "string",
+                    "description" : "",
+                    "format" : "email"
+                  },
+                  "nickname" : {
+                    "maxLength" : 32,
+                    "type" : "string",
+                    "description" : ""
+                  },
+                  "rememberMe" : {
+                    "type" : "boolean",
+                    "description" : ""
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "409" : {
+            "description" : "注册成功\n参数错误\n用户名或邮箱已存在",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "token" : {
+                          "type" : "string",
+                          "description" : "访问令牌"
+                        },
+                        "tokenType" : {
+                          "type" : "string",
+                          "description" : "令牌类型",
+                          "default" : "Bearer"
+                        },
+                        "expiresIn" : {
+                          "type" : "integer",
+                          "description" : "令牌过期时间（秒）",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "用户ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "邮箱"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像URL"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "用户状态（0: 禁用, 1: 正常）"
+                        },
+                        "roles" : {
+                          "type" : "array",
+                          "description" : "用户角色列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "permissions" : {
+                          "type" : "array",
+                          "description" : "用户权限列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "rememberMe" : {
+                          "type" : "boolean",
+                          "description" : "是否记住我"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "注册成功\n参数错误\n用户名或邮箱已存在"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login" : {
+      "post" : {
+        "summary" : "用户登录",
+        "description" : "用户登录",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "password", "username" ],
+                "type" : "object",
+                "properties" : {
+                  "username" : {
+                    "maxLength" : 50,
+                    "minLength" : 2,
+                    "type" : "string",
+                    "description" : "用户名"
+                  },
+                  "password" : {
+                    "maxLength" : 100,
+                    "minLength" : 6,
+                    "type" : "string",
+                    "description" : "密码"
+                  },
+                  "rememberMe" : {
+                    "type" : "boolean",
+                    "description" : "记住我\ntrue: 长期有效（7天）\nfalse: 短期有效（6小时）"
+                  },
+                  "captcha" : {
+                    "type" : "string",
+                    "description" : "验证码（可选）"
+                  },
+                  "captchaKey" : {
+                    "type" : "string",
+                    "description" : "验证码key（可选）"
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "401" : {
+            "description" : "登录成功\n参数错误\n用户名或密码错误",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "token" : {
+                          "type" : "string",
+                          "description" : "访问令牌"
+                        },
+                        "tokenType" : {
+                          "type" : "string",
+                          "description" : "令牌类型",
+                          "default" : "Bearer"
+                        },
+                        "expiresIn" : {
+                          "type" : "integer",
+                          "description" : "令牌过期时间（秒）",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "用户ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "邮箱"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像URL"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "用户状态（0: 禁用, 1: 正常）"
+                        },
+                        "roles" : {
+                          "type" : "array",
+                          "description" : "用户角色列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "permissions" : {
+                          "type" : "array",
+                          "description" : "用户权限列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "rememberMe" : {
+                          "type" : "boolean",
+                          "description" : "是否记住我"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "登录成功\n参数错误\n用户名或密码错误"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout" : {
+      "post" : {
+        "summary" : "用户登出",
+        "description" : "用户登出",
+        "responses" : {
+          "200" : {
+            "description" : "登出成功",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "登出成功"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/userinfo" : {
+      "get" : {
+        "summary" : "获取用户信息",
+        "description" : "获取用户信息",
+        "responses" : {
+          "401" : {
+            "description" : "获取成功\n未登录",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "token" : {
+                          "type" : "string",
+                          "description" : "访问令牌"
+                        },
+                        "tokenType" : {
+                          "type" : "string",
+                          "description" : "令牌类型",
+                          "default" : "Bearer"
+                        },
+                        "expiresIn" : {
+                          "type" : "integer",
+                          "description" : "令牌过期时间（秒）",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "用户ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "邮箱"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像URL"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "用户状态（0: 禁用, 1: 正常）"
+                        },
+                        "roles" : {
+                          "type" : "array",
+                          "description" : "用户角色列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "permissions" : {
+                          "type" : "array",
+                          "description" : "用户权限列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "rememberMe" : {
+                          "type" : "boolean",
+                          "description" : "是否记住我"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "获取成功\n未登录"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/check" : {
+      "get" : {
+        "summary" : "检查登录状态",
+        "description" : "检查登录状态",
+        "responses" : {
+          "2005" : {
+            "description" : "已登录\n用户未登录",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "object",
+                          "properties" : { }
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "已登录\n用户未登录"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh" : {
+      "post" : {
+        "summary" : "刷新Token",
+        "description" : "刷新Token",
+        "responses" : {
+          "401" : {
+            "description" : "刷新成功\n未登录",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "token" : {
+                          "type" : "string"
+                        },
+                        "expiresIn" : {
+                          "type" : "integer"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "刷新成功\n未登录"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/usernames/{username}/availability" : {
+      "get" : {
+        "summary" : "检查用户名是否可用（注册/编辑时使用）",
+        "description" : "检查用户名是否可用（注册/编辑时使用）",
+        "parameters" : [ {
+          "name" : "username",
+          "in" : "path",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "excludeUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "available" : {
+                          "type" : "boolean",
+                          "description" : ""
+                        },
+                        "reason" : {
+                          "type" : "string",
+                          "description" : "只有不可用时才有值，可选放更多信息如“已被用户xxx占用”"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/emails/{email}/availability" : {
+      "get" : {
+        "summary" : "检查邮箱是否可用（注册/编辑时使用）",
+        "description" : "检查邮箱是否可用（注册/编辑时使用）",
+        "parameters" : [ {
+          "name" : "email",
+          "in" : "path",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "excludeUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "available" : {
+                          "type" : "boolean",
+                          "description" : ""
+                        },
+                        "reason" : {
+                          "type" : "string",
+                          "description" : "只有不可用时才有值，可选放更多信息如“已被用户xxx占用”"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verification-code/send" : {
+      "post" : {
+        "summary" : "发送验证码",
+        "description" : "发送验证码",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "email", "type" ],
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "type" : "string",
+                    "description" : "邮箱地址",
+                    "format" : "email",
+                    "example" : "user@example.com"
+                  },
+                  "type" : {
+                    "type" : "string",
+                    "description" : "验证码类型：REGISTER-注册, RESET_PASSWORD-重置密码, LOGIN-登录验证",
+                    "example" : "REGISTER"
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "400" : {
+            "description" : "发送成功\n参数错误或发送过于频繁",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "type" : {
+                          "type" : "string"
+                        },
+                        "email" : {
+                          "type" : "string"
+                        },
+                        "cooldown" : {
+                          "type" : "integer"
+                        },
+                        "ttl" : {
+                          "type" : "integer"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "发送成功\n参数错误或发送过于频繁"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verification-code/verify" : {
+      "post" : {
+        "summary" : "验证验证码",
+        "description" : "验证验证码",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "code", "email", "type" ],
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "type" : "string",
+                    "description" : "邮箱地址",
+                    "format" : "email",
+                    "example" : "user@example.com"
+                  },
+                  "code" : {
+                    "pattern" : "^\\d{6}$",
+                    "type" : "string",
+                    "description" : "6位数字验证码",
+                    "example" : "123456"
+                  },
+                  "type" : {
+                    "type" : "string",
+                    "description" : "验证码类型",
+                    "example" : "REGISTER"
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "400" : {
+            "description" : "验证成功\n验证码错误或已过期",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "验证成功\n验证码错误或已过期"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verification-code/cooldown" : {
+      "get" : {
+        "summary" : "检查验证码冷却状态",
+        "description" : "检查验证码冷却状态",
+        "parameters" : [ {
+          "name" : "email",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "type",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "canSend" : {
+                          "type" : "boolean"
+                        },
+                        "remainingSeconds" : {
+                          "type" : "integer"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/github/authorize" : {
+      "get" : {
+        "summary" : "获取 GitHub 授权 URL",
+        "description" : "获取 GitHub 授权 URL",
+        "parameters" : [ {
+          "name" : "state",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "获取成功",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "string"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "获取成功"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/github/callback" : {
+      "get" : {
+        "summary" : "GitHub OAuth2 回调（GET）",
+        "description" : "GitHub OAuth2 回调（GET）",
+        "parameters" : [ {
+          "name" : "code",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "state",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "rememberMe",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "nullable" : false,
+            "default" : "false"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "GitHub OAuth2 回调",
+        "description" : "GitHub OAuth2 回调",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "code" ],
+                "type" : "object",
+                "properties" : {
+                  "code" : {
+                    "type" : "string",
+                    "description" : "OAuth2 授权码"
+                  },
+                  "state" : {
+                    "type" : "string",
+                    "description" : "OAuth2 state 参数（用于防止 CSRF 攻击）"
+                  },
+                  "rememberMe" : {
+                    "type" : "boolean",
+                    "description" : "是否记住登录状态"
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "400" : {
+            "description" : "登录成功或需要注册\n授权失败",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "登录成功或需要注册\n授权失败"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/send-verification-code" : {
+      "post" : {
+        "summary" : "发送邮箱验证码",
+        "description" : "发送邮箱验证码",
+        "parameters" : [ {
+          "name" : "tempUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "email",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/verify-email" : {
+      "post" : {
+        "summary" : "验证邮箱",
+        "description" : "验证邮箱",
+        "parameters" : [ {
+          "name" : "tempUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "email",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "code",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "isGitHubEmail",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "nullable" : false,
+            "default" : "false"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/complete-registration" : {
+      "post" : {
+        "summary" : "完成 OAuth2 注册",
+        "description" : "完成 OAuth2 注册",
+        "parameters" : [ {
+          "name" : "tempUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "username",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "rememberMe",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "nullable" : false,
+            "default" : "false"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "token" : {
+                          "type" : "string",
+                          "description" : "访问令牌"
+                        },
+                        "tokenType" : {
+                          "type" : "string",
+                          "description" : "令牌类型",
+                          "default" : "Bearer"
+                        },
+                        "expiresIn" : {
+                          "type" : "integer",
+                          "description" : "令牌过期时间（秒）",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "用户ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "邮箱"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像URL"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "用户状态（0: 禁用, 1: 正常）"
+                        },
+                        "roles" : {
+                          "type" : "array",
+                          "description" : "用户角色列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "permissions" : {
+                          "type" : "array",
+                          "description" : "用户权限列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "rememberMe" : {
+                          "type" : "boolean",
+                          "description" : "是否记住我"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/initiate-merge" : {
+      "post" : {
+        "summary" : "发起账号合并",
+        "description" : "发起账号合并",
+        "parameters" : [ {
+          "name" : "tempUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "email",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "object",
+                          "properties" : { }
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/complete-merge" : {
+      "post" : {
+        "summary" : "完成账号合并",
+        "description" : "完成账号合并",
+        "parameters" : [ {
+          "name" : "tempUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "existingUserId",
+          "in" : "query",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "nullable" : false
+          }
+        }, {
+          "name" : "rememberMe",
+          "in" : "query",
+          "description" : "",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "nullable" : false,
+            "default" : "false"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "token" : {
+                          "type" : "string",
+                          "description" : "访问令牌"
+                        },
+                        "tokenType" : {
+                          "type" : "string",
+                          "description" : "令牌类型",
+                          "default" : "Bearer"
+                        },
+                        "expiresIn" : {
+                          "type" : "integer",
+                          "description" : "令牌过期时间（秒）",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "用户ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "邮箱"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像URL"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "用户状态（0: 禁用, 1: 正常）"
+                        },
+                        "roles" : {
+                          "type" : "array",
+                          "description" : "用户角色列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "permissions" : {
+                          "type" : "array",
+                          "description" : "用户权限列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "rememberMe" : {
+                          "type" : "boolean",
+                          "description" : "是否记住我"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/bindings" : {
+      "get" : {
+        "summary" : "获取 OAuth2 绑定列表",
+        "description" : "获取 OAuth2 绑定列表",
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "object",
+                          "properties" : { }
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/oauth2/bindings/{provider}" : {
+      "delete" : {
+        "summary" : "解除 OAuth2 绑定",
+        "description" : "解除 OAuth2 绑定",
+        "parameters" : [ {
+          "name" : "provider",
+          "in" : "path",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users" : {
+      "post" : {
+        "summary" : "创建用户",
+        "description" : "创建用户",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "createdAt" : {
+                    "type" : "string",
+                    "description" : "创建时间"
+                  },
+                  "updatedAt" : {
+                    "type" : "string",
+                    "description" : "更新时间"
+                  },
+                  "createdBy" : {
+                    "type" : "integer",
+                    "description" : "创建人ID",
+                    "format" : "int64"
+                  },
+                  "updatedBy" : {
+                    "type" : "integer",
+                    "description" : "更新人ID",
+                    "format" : "int64"
+                  },
+                  "id" : {
+                    "type" : "integer",
+                    "description" : "主键ID",
+                    "format" : "int64"
+                  },
+                  "currentBucketId" : {
+                    "type" : "integer",
+                    "description" : "当前默认使用的存储桶ID",
+                    "format" : "int64"
+                  },
+                  "username" : {
+                    "type" : "string",
+                    "description" : "唯一内部系统登录名/标识"
+                  },
+                  "nickname" : {
+                    "type" : "string",
+                    "description" : "显示昵称，允许重复"
+                  },
+                  "password" : {
+                    "type" : "string",
+                    "description" : "加密存储，OAuth 用户可为空"
+                  },
+                  "email" : {
+                    "type" : "string",
+                    "description" : "可选，不唯一"
+                  },
+                  "avatarUrl" : {
+                    "type" : "string",
+                    "description" : "头像"
+                  },
+                  "status" : {
+                    "maximum" : 128,
+                    "minimum" : -127,
+                    "type" : "integer",
+                    "description" : "0: 禁用, 1: 正常"
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "password" : {
+                          "type" : "string",
+                          "description" : "加密存储，OAuth 用户可为空"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "可选，不唯一"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "0: 禁用, 1: 正常"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{id}" : {
+      "get" : {
+        "summary" : "获取用户详情",
+        "description" : "获取用户详情",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "password" : {
+                          "type" : "string",
+                          "description" : "加密存储，OAuth 用户可为空"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "可选，不唯一"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "0: 禁用, 1: 正常"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "summary" : "更新用户",
+        "description" : "更新用户",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "createdAt" : {
+                    "type" : "string",
+                    "description" : "创建时间"
+                  },
+                  "updatedAt" : {
+                    "type" : "string",
+                    "description" : "更新时间"
+                  },
+                  "createdBy" : {
+                    "type" : "integer",
+                    "description" : "创建人ID",
+                    "format" : "int64"
+                  },
+                  "updatedBy" : {
+                    "type" : "integer",
+                    "description" : "更新人ID",
+                    "format" : "int64"
+                  },
+                  "id" : {
+                    "type" : "integer",
+                    "description" : "主键ID",
+                    "format" : "int64"
+                  },
+                  "currentBucketId" : {
+                    "type" : "integer",
+                    "description" : "当前默认使用的存储桶ID",
+                    "format" : "int64"
+                  },
+                  "username" : {
+                    "type" : "string",
+                    "description" : "唯一内部系统登录名/标识"
+                  },
+                  "nickname" : {
+                    "type" : "string",
+                    "description" : "显示昵称，允许重复"
+                  },
+                  "password" : {
+                    "type" : "string",
+                    "description" : "加密存储，OAuth 用户可为空"
+                  },
+                  "email" : {
+                    "type" : "string",
+                    "description" : "可选，不唯一"
+                  },
+                  "avatarUrl" : {
+                    "type" : "string",
+                    "description" : "头像"
+                  },
+                  "status" : {
+                    "maximum" : 128,
+                    "minimum" : -127,
+                    "type" : "integer",
+                    "description" : "0: 禁用, 1: 正常"
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "password" : {
+                          "type" : "string",
+                          "description" : "加密存储，OAuth 用户可为空"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "可选，不唯一"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "0: 禁用, 1: 正常"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{id}/avatar" : {
+      "post" : {
+        "summary" : "更新用户头像",
+        "description" : "更新用户头像",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "required" : [ "file" ],
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "description" : "",
+                    "format" : "binary"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "password" : {
+                          "type" : "string",
+                          "description" : "加密存储，OAuth 用户可为空"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "可选，不唯一"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "0: 禁用, 1: 正常"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/profile" : {
+      "put" : {
+        "summary" : "更新当前用户信息",
+        "description" : "更新当前用户信息",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "currentBucketId" : {
+                    "type" : "integer",
+                    "description" : "当前默认使用的存储桶ID",
+                    "format" : "int64"
+                  },
+                  "nickname" : {
+                    "maxLength" : 50,
+                    "type" : "string",
+                    "description" : "显示昵称，允许重复"
+                  },
+                  "email" : {
+                    "maxLength" : 100,
+                    "type" : "string",
+                    "description" : "邮箱（可选，不唯一）",
+                    "format" : "email"
+                  },
+                  "avatarUrl" : {
+                    "maxLength" : 500,
+                    "type" : "string",
+                    "description" : "头像URL"
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "token" : {
+                          "type" : "string",
+                          "description" : "访问令牌"
+                        },
+                        "tokenType" : {
+                          "type" : "string",
+                          "description" : "令牌类型",
+                          "default" : "Bearer"
+                        },
+                        "expiresIn" : {
+                          "type" : "integer",
+                          "description" : "令牌过期时间（秒）",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "用户ID",
+                          "format" : "int64"
+                        },
+                        "currentBucketId" : {
+                          "type" : "integer",
+                          "description" : "当前默认使用的存储桶ID",
+                          "format" : "int64"
+                        },
+                        "username" : {
+                          "type" : "string",
+                          "description" : "唯一内部系统登录名/标识"
+                        },
+                        "nickname" : {
+                          "type" : "string",
+                          "description" : "显示昵称，允许重复"
+                        },
+                        "email" : {
+                          "type" : "string",
+                          "description" : "邮箱"
+                        },
+                        "avatarUrl" : {
+                          "type" : "string",
+                          "description" : "头像URL"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "用户状态（0: 禁用, 1: 正常）"
+                        },
+                        "roles" : {
+                          "type" : "array",
+                          "description" : "用户角色列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "permissions" : {
+                          "type" : "array",
+                          "description" : "用户权限列表",
+                          "items" : {
+                            "type" : "string"
+                          }
+                        },
+                        "rememberMe" : {
+                          "type" : "boolean",
+                          "description" : "是否记住我"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage-buckets" : {
+      "get" : {
+        "summary" : "分页查询存储桶",
+        "description" : "分页查询存储桶",
+        "parameters" : [ {
+          "name" : "pageNum",
+          "in" : "query",
+          "description" : "页码",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "nullable" : false,
+            "default" : "1"
+          }
+        }, {
+          "name" : "pageSize",
+          "in" : "query",
+          "description" : "每页大小",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "nullable" : false,
+            "default" : "10"
+          }
+        }, {
+          "name" : "bucketName",
+          "in" : "query",
+          "description" : "存储桶名称",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "status",
+          "in" : "query",
+          "description" : "状态",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "nullable" : false
+          }
+        }, {
+          "name" : "startTime",
+          "in" : "query",
+          "description" : "开始时间",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        }, {
+          "name" : "endTime",
+          "in" : "query",
+          "description" : "结束时间",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "查询成功",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "records" : {
+                          "type" : "array",
+                          "description" : "",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "createdAt" : {
+                                "type" : "string",
+                                "description" : "创建时间"
+                              },
+                              "updatedAt" : {
+                                "type" : "string",
+                                "description" : "更新时间"
+                              },
+                              "createdBy" : {
+                                "type" : "integer",
+                                "description" : "创建人ID",
+                                "format" : "int64"
+                              },
+                              "updatedBy" : {
+                                "type" : "integer",
+                                "description" : "更新人ID",
+                                "format" : "int64"
+                              },
+                              "id" : {
+                                "type" : "integer",
+                                "description" : "主键ID",
+                                "format" : "int64"
+                              },
+                              "ownerId" : {
+                                "type" : "integer",
+                                "description" : "拥有者用户ID（创建者/付费主体）",
+                                "format" : "int64"
+                              },
+                              "bucketType" : {
+                                "maximum" : 128,
+                                "minimum" : -127,
+                                "type" : "integer",
+                                "description" : "桶类型：0=个人私有, 1=团队/共享"
+                              },
+                              "name" : {
+                                "type" : "string",
+                                "description" : "桶名称（用户可见）"
+                              },
+                              "description" : {
+                                "type" : "string",
+                                "description" : "桶描述，可选"
+                              },
+                              "totalStorage" : {
+                                "type" : "integer",
+                                "description" : "总配额（字节）",
+                                "format" : "int64"
+                              },
+                              "usedStorage" : {
+                                "type" : "integer",
+                                "description" : "已使用量（字节）",
+                                "format" : "int64"
+                              },
+                              "status" : {
+                                "maximum" : 128,
+                                "minimum" : -127,
+                                "type" : "integer",
+                                "description" : "状态：0=禁用, 1=正常, 2=只读（扩展用）"
+                              }
+                            },
+                            "description" : "<p>\n存储桶 - 容量与归属的核心表\n</p>"
+                          }
+                        },
+                        "total" : {
+                          "type" : "integer",
+                          "description" : "",
+                          "format" : "int64"
+                        },
+                        "size" : {
+                          "type" : "integer",
+                          "description" : "",
+                          "format" : "int64"
+                        },
+                        "current" : {
+                          "type" : "integer",
+                          "description" : "",
+                          "format" : "int64"
+                        },
+                        "orders" : {
+                          "type" : "array",
+                          "description" : "",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "column" : {
+                                "type" : "string",
+                                "description" : ""
+                              },
+                              "asc" : {
+                                "type" : "boolean",
+                                "description" : ""
+                              }
+                            },
+                            "description" : "com.baomidou.mybatisplus.core.metadata.OrderItem"
+                          }
+                        },
+                        "optimizeCountSql" : {
+                          "type" : "boolean",
+                          "description" : ""
+                        },
+                        "searchCount" : {
+                          "type" : "boolean",
+                          "description" : ""
+                        },
+                        "optimizeJoinOfCountSql" : {
+                          "type" : "boolean",
+                          "description" : ""
+                        },
+                        "maxLimit" : {
+                          "type" : "integer",
+                          "description" : "",
+                          "format" : "int64"
+                        },
+                        "countId" : {
+                          "type" : "string",
+                          "description" : ""
+                        },
+                        "pages" : {
+                          "type" : "integer",
+                          "format" : "int64"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "查询成功"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "summary" : "创建存储桶",
+        "description" : "创建存储桶",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "bucketName" ],
+                "type" : "object",
+                "properties" : {
+                  "bucketName" : {
+                    "type" : "string",
+                    "description" : ""
+                  },
+                  "description" : {
+                    "type" : "string",
+                    "description" : ""
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "409" : {
+            "description" : "创建成功\n参数错误\n存储桶名称已存在",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "ownerId" : {
+                          "type" : "integer",
+                          "description" : "拥有者用户ID（创建者/付费主体）",
+                          "format" : "int64"
+                        },
+                        "bucketType" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "桶类型：0=个人私有, 1=团队/共享"
+                        },
+                        "name" : {
+                          "type" : "string",
+                          "description" : "桶名称（用户可见）"
+                        },
+                        "description" : {
+                          "type" : "string",
+                          "description" : "桶描述，可选"
+                        },
+                        "totalStorage" : {
+                          "type" : "integer",
+                          "description" : "总配额（字节）",
+                          "format" : "int64"
+                        },
+                        "usedStorage" : {
+                          "type" : "integer",
+                          "description" : "已使用量（字节）",
+                          "format" : "int64"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "状态：0=禁用, 1=正常, 2=只读（扩展用）"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "创建成功\n参数错误\n存储桶名称已存在"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage-buckets/{bucketId}" : {
+      "get" : {
+        "summary" : "获取存储桶详情",
+        "description" : "获取存储桶详情",
+        "parameters" : [ {
+          "name" : "bucketId",
+          "in" : "path",
+          "description" : "存储桶ID",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "description" : "获取成功\n存储桶不存在",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "ownerId" : {
+                          "type" : "integer",
+                          "description" : "拥有者用户ID（创建者/付费主体）",
+                          "format" : "int64"
+                        },
+                        "bucketType" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "桶类型：0=个人私有, 1=团队/共享"
+                        },
+                        "name" : {
+                          "type" : "string",
+                          "description" : "桶名称（用户可见）"
+                        },
+                        "description" : {
+                          "type" : "string",
+                          "description" : "桶描述，可选"
+                        },
+                        "totalStorage" : {
+                          "type" : "integer",
+                          "description" : "总配额（字节）",
+                          "format" : "int64"
+                        },
+                        "usedStorage" : {
+                          "type" : "integer",
+                          "description" : "已使用量（字节）",
+                          "format" : "int64"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "状态：0=禁用, 1=正常, 2=只读（扩展用）"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "获取成功\n存储桶不存在"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "summary" : "更新存储桶",
+        "description" : "更新存储桶",
+        "parameters" : [ {
+          "name" : "bucketId",
+          "in" : "path",
+          "description" : "存储桶ID",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "description" : {
+                    "type" : "string",
+                    "description" : ""
+                  }
+                },
+                "description" : ""
+              }
+            }
+          }
+        },
+        "responses" : {
+          "403" : {
+            "description" : "更新成功\n存储桶不存在\n无权限更新",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "ownerId" : {
+                          "type" : "integer",
+                          "description" : "拥有者用户ID（创建者/付费主体）",
+                          "format" : "int64"
+                        },
+                        "bucketType" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "桶类型：0=个人私有, 1=团队/共享"
+                        },
+                        "name" : {
+                          "type" : "string",
+                          "description" : "桶名称（用户可见）"
+                        },
+                        "description" : {
+                          "type" : "string",
+                          "description" : "桶描述，可选"
+                        },
+                        "totalStorage" : {
+                          "type" : "integer",
+                          "description" : "总配额（字节）",
+                          "format" : "int64"
+                        },
+                        "usedStorage" : {
+                          "type" : "integer",
+                          "description" : "已使用量（字节）",
+                          "format" : "int64"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "状态：0=禁用, 1=正常, 2=只读（扩展用）"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "更新成功\n存储桶不存在\n无权限更新"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "删除存储桶",
+        "description" : "删除存储桶",
+        "parameters" : [ {
+          "name" : "bucketId",
+          "in" : "path",
+          "description" : "存储桶ID",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "403" : {
+            "description" : "删除成功\n存储桶不存在\n无权限删除",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "删除成功\n存储桶不存在\n无权限删除"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage-buckets/my" : {
+      "get" : {
+        "summary" : "获取我的存储桶",
+        "description" : "获取我的存储桶",
+        "responses" : {
+          "200" : {
+            "description" : "获取成功",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "array",
+                      "description" : "返回数据",
+                      "items" : {
+                        "type" : "object",
+                        "properties" : {
+                          "createdAt" : {
+                            "type" : "string",
+                            "description" : "创建时间"
+                          },
+                          "updatedAt" : {
+                            "type" : "string",
+                            "description" : "更新时间"
+                          },
+                          "createdBy" : {
+                            "type" : "integer",
+                            "description" : "创建人ID",
+                            "format" : "int64"
+                          },
+                          "updatedBy" : {
+                            "type" : "integer",
+                            "description" : "更新人ID",
+                            "format" : "int64"
+                          },
+                          "id" : {
+                            "type" : "integer",
+                            "description" : "主键ID",
+                            "format" : "int64"
+                          },
+                          "ownerId" : {
+                            "type" : "integer",
+                            "description" : "拥有者用户ID（创建者/付费主体）",
+                            "format" : "int64"
+                          },
+                          "bucketType" : {
+                            "maximum" : 128,
+                            "minimum" : -127,
+                            "type" : "integer",
+                            "description" : "桶类型：0=个人私有, 1=团队/共享"
+                          },
+                          "name" : {
+                            "type" : "string",
+                            "description" : "桶名称（用户可见）"
+                          },
+                          "description" : {
+                            "type" : "string",
+                            "description" : "桶描述，可选"
+                          },
+                          "totalStorage" : {
+                            "type" : "integer",
+                            "description" : "总配额（字节）",
+                            "format" : "int64"
+                          },
+                          "usedStorage" : {
+                            "type" : "integer",
+                            "description" : "已使用量（字节）",
+                            "format" : "int64"
+                          },
+                          "status" : {
+                            "maximum" : 128,
+                            "minimum" : -127,
+                            "type" : "integer",
+                            "description" : "状态：0=禁用, 1=正常, 2=只读（扩展用）"
+                          }
+                        },
+                        "description" : "<p>\n存储桶 - 容量与归属的核心表\n</p>"
+                      }
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "获取成功"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage-buckets/{bucketId}/set-default" : {
+      "post" : {
+        "summary" : "设置默认存储桶",
+        "description" : "设置默认存储桶",
+        "parameters" : [ {
+          "name" : "bucketId",
+          "in" : "path",
+          "description" : "存储桶ID",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "403" : {
+            "description" : "设置成功\n存储桶不存在\n无权限设置",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "string",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "设置成功\n存储桶不存在\n无权限设置"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage-buckets/default" : {
+      "get" : {
+        "summary" : "获取默认存储桶",
+        "description" : "获取默认存储桶",
+        "responses" : {
+          "200" : {
+            "description" : "获取成功",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "createdAt" : {
+                          "type" : "string",
+                          "description" : "创建时间"
+                        },
+                        "updatedAt" : {
+                          "type" : "string",
+                          "description" : "更新时间"
+                        },
+                        "createdBy" : {
+                          "type" : "integer",
+                          "description" : "创建人ID",
+                          "format" : "int64"
+                        },
+                        "updatedBy" : {
+                          "type" : "integer",
+                          "description" : "更新人ID",
+                          "format" : "int64"
+                        },
+                        "id" : {
+                          "type" : "integer",
+                          "description" : "主键ID",
+                          "format" : "int64"
+                        },
+                        "ownerId" : {
+                          "type" : "integer",
+                          "description" : "拥有者用户ID（创建者/付费主体）",
+                          "format" : "int64"
+                        },
+                        "bucketType" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "桶类型：0=个人私有, 1=团队/共享"
+                        },
+                        "name" : {
+                          "type" : "string",
+                          "description" : "桶名称（用户可见）"
+                        },
+                        "description" : {
+                          "type" : "string",
+                          "description" : "桶描述，可选"
+                        },
+                        "totalStorage" : {
+                          "type" : "integer",
+                          "description" : "总配额（字节）",
+                          "format" : "int64"
+                        },
+                        "usedStorage" : {
+                          "type" : "integer",
+                          "description" : "已使用量（字节）",
+                          "format" : "int64"
+                        },
+                        "status" : {
+                          "maximum" : 128,
+                          "minimum" : -127,
+                          "type" : "integer",
+                          "description" : "状态：0=禁用, 1=正常, 2=只读（扩展用）"
+                        }
+                      },
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "获取成功"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage-buckets/check-name" : {
+      "get" : {
+        "summary" : "检查存储桶名称",
+        "description" : "检查存储桶名称",
+        "parameters" : [ {
+          "name" : "bucketName",
+          "in" : "query",
+          "description" : "存储桶名称",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "nullable" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "检查成功",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "boolean",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "检查成功"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage-buckets/sync" : {
+      "post" : {
+        "summary" : "同步存储桶",
+        "description" : "同步存储桶",
+        "responses" : {
+          "200" : {
+            "description" : "同步成功",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "description" : "状态码"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "description" : "返回消息"
+                    },
+                    "data" : {
+                      "type" : "integer",
+                      "description" : "返回数据"
+                    },
+                    "timestamp" : {
+                      "type" : "integer",
+                      "description" : "时间戳",
+                      "format" : "int64"
+                    }
+                  },
+                  "description" : "同步成功"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "登录响应DTO" : {
+        "type" : "object",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "description" : "访问令牌"
+          },
+          "tokenType" : {
+            "type" : "string",
+            "description" : "令牌类型",
+            "default" : "Bearer"
+          },
+          "expiresIn" : {
+            "type" : "integer",
+            "description" : "令牌过期时间（秒）",
+            "format" : "int64"
+          },
+          "id" : {
+            "type" : "integer",
+            "description" : "用户ID",
+            "format" : "int64"
+          },
+          "currentBucketId" : {
+            "type" : "integer",
+            "description" : "当前默认使用的存储桶ID",
+            "format" : "int64"
+          },
+          "username" : {
+            "type" : "string",
+            "description" : "唯一内部系统登录名/标识"
+          },
+          "nickname" : {
+            "type" : "string",
+            "description" : "显示昵称，允许重复"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "邮箱"
+          },
+          "avatarUrl" : {
+            "type" : "string",
+            "description" : "头像URL"
+          },
+          "status" : {
+            "maximum" : 128,
+            "minimum" : -127,
+            "type" : "integer",
+            "description" : "用户状态（0: 禁用, 1: 正常）"
+          },
+          "roles" : {
+            "type" : "array",
+            "description" : "用户角色列表",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "permissions" : {
+            "type" : "array",
+            "description" : "用户权限列表",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "rememberMe" : {
+            "type" : "boolean",
+            "description" : "是否记住我"
+          }
+        },
+        "description" : "返回数据"
+      },
+      "java.lang.Object" : {
+        "type" : "object",
+        "properties" : {
+          "canSend" : {
+            "type" : "boolean"
+          },
+          "remainingSeconds" : {
+            "type" : "integer"
+          }
+        },
+        "description" : "返回数据"
+      },
+      "cn.zjj.mkcsmodel.vo.AvailabilityResponse" : {
+        "type" : "object",
+        "properties" : {
+          "available" : {
+            "type" : "boolean",
+            "description" : ""
+          },
+          "reason" : {
+            "type" : "string",
+            "description" : "只有不可用时才有值，可选放更多信息如“已被用户xxx占用”"
+          }
+        },
+        "description" : "返回数据"
+      },
+      "<p>\n用户核心表\n</p>" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "description" : "创建时间"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "description" : "更新时间"
+          },
+          "createdBy" : {
+            "type" : "integer",
+            "description" : "创建人ID",
+            "format" : "int64"
+          },
+          "updatedBy" : {
+            "type" : "integer",
+            "description" : "更新人ID",
+            "format" : "int64"
+          },
+          "id" : {
+            "type" : "integer",
+            "description" : "主键ID",
+            "format" : "int64"
+          },
+          "currentBucketId" : {
+            "type" : "integer",
+            "description" : "当前默认使用的存储桶ID",
+            "format" : "int64"
+          },
+          "username" : {
+            "type" : "string",
+            "description" : "唯一内部系统登录名/标识"
+          },
+          "nickname" : {
+            "type" : "string",
+            "description" : "显示昵称，允许重复"
+          },
+          "password" : {
+            "type" : "string",
+            "description" : "加密存储，OAuth 用户可为空"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "可选，不唯一"
+          },
+          "avatarUrl" : {
+            "type" : "string",
+            "description" : "头像"
+          },
+          "status" : {
+            "maximum" : 128,
+            "minimum" : -127,
+            "type" : "integer",
+            "description" : "0: 禁用, 1: 正常"
+          }
+        },
+        "description" : "返回数据"
+      },
+      "<p>\n存储桶 - 容量与归属的核心表\n</p>" : {
+        "type" : "object",
+        "properties" : {
+          "createdAt" : {
+            "type" : "string",
+            "description" : "创建时间"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "description" : "更新时间"
+          },
+          "createdBy" : {
+            "type" : "integer",
+            "description" : "创建人ID",
+            "format" : "int64"
+          },
+          "updatedBy" : {
+            "type" : "integer",
+            "description" : "更新人ID",
+            "format" : "int64"
+          },
+          "id" : {
+            "type" : "integer",
+            "description" : "主键ID",
+            "format" : "int64"
+          },
+          "ownerId" : {
+            "type" : "integer",
+            "description" : "拥有者用户ID（创建者/付费主体）",
+            "format" : "int64"
+          },
+          "bucketType" : {
+            "maximum" : 128,
+            "minimum" : -127,
+            "type" : "integer",
+            "description" : "桶类型：0=个人私有, 1=团队/共享"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "桶名称（用户可见）"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "桶描述，可选"
+          },
+          "totalStorage" : {
+            "type" : "integer",
+            "description" : "总配额（字节）",
+            "format" : "int64"
+          },
+          "usedStorage" : {
+            "type" : "integer",
+            "description" : "已使用量（字节）",
+            "format" : "int64"
+          },
+          "status" : {
+            "maximum" : 128,
+            "minimum" : -127,
+            "type" : "integer",
+            "description" : "状态：0=禁用, 1=正常, 2=只读（扩展用）"
+          }
+        },
+        "description" : "返回数据"
+      },
+      "com.baomidou.mybatisplus.core.metadata.OrderItem" : {
+        "type" : "object",
+        "properties" : {
+          "column" : {
+            "type" : "string",
+            "description" : ""
+          },
+          "asc" : {
+            "type" : "boolean",
+            "description" : ""
+          }
+        },
+        "description" : "com.baomidou.mybatisplus.core.metadata.OrderItem"
+      }
+    }
+  }
+}
