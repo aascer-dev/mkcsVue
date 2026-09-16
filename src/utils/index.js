@@ -4,13 +4,16 @@
 
 // 格式化文件大小
 export const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B'
+  // 处理 null, undefined, 非数字类型
+  const num = Number(bytes)
+  if (!Number.isFinite(num) || num < 0) return '0 B'
+  if (num === 0) return '0 B'
   
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const i = Math.floor(Math.log(num) / Math.log(k))
   
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return parseFloat((num / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 /**

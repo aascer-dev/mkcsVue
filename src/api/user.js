@@ -139,3 +139,11 @@ export const updateUser = (userId, data) => {
     data
   })
 }
+
+// 获取用户信息
+export const getUserInfo = () => {
+  return request({
+    url: '/api/users/info',
+    method: 'get'
+  })
+}

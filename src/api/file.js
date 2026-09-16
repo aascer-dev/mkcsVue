@@ -1,18 +1,185 @@
 import request from '@/utils/request.js'
 
-// 获取文件列表
-export const getFileList = (path = '/') => {
+/**
+ * 获取文件夹内容（按文件夹ID）
+ * @param {number} folderId - 文件夹ID（0 表示根目录）
+ * @param {number} pageNum - 页码
+ * @param {number} pageSize - 每页条数
+ */
+export const getFolderContents = (folderId = 0, pageNum = 1, pageSize = 20) => {
   return request({
-    url: '/files/list',
+    url: `/api/files/folder/${folderId}/contents`,
     method: 'get',
-    params: { path }
+    params: { pageNum, pageSize }
   })
 }
 
-// 上传文件
-export const uploadFile = (formData, onUploadProgress) => {
+/**
+ * 获取文件详情
+ * @param {number} fileId - 文件ID
+ */
+export const getFileInfo = (fileId) => {
   return request({
-    url: '/files/upload',
+    url: `/api/files/${fileId}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 上传文件
+ * @param {FormData} formData - 包含 file, parentId, bucketId
+ * @param {Function} onUploadProgress - 上传进度回调
+ * @param {AbortSignal} signal - 中断上传的信号
+ */
+export const uploadFile = (formData, onUploadProgress, signal) => {
+  return request({
+    url: '/api/files/upload',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    onUploadProgress,
+    signal
+  })
+}
+
+/**
+ * 下载文件
+ * @param {number} fileId - 文件ID
+ * @returns {Promise<Blob>}
+ */
+export const downloadFile = (fileId) => {
+  return request({
+    url: `/api/files/download/${fileId}`,
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
+/**
+ * 删除文件（软删除）
+ * @param {number} fileId - 文件ID
+ */
+export const deleteFile = (fileId) => {
+  return request({
+    url: `/api/files/${fileId}`,
+    method: 'delete'
+  })
+}
+
+/**
+ * 批量删除文件
+ * @param {number[]} fileIds - 文件ID数组
+ */
+export const batchDeleteFiles = (fileIds) => {
+  return request({
+    url: '/api/files/batch-delete',
+    method: 'post',
+    data: fileIds
+  })
+}
+
+/**
+ * 创建文件夹
+ * @param {Object} data - { folderName, parentId, bucketId }
+ */
+export const createFolder = (data) => {
+  return request({
+    url: '/api/files/folder/create',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 批量创建文件夹（支持嵌套路径）
+ * @param {Object} data - { folderPath, parentId, bucketId }
+ */
+export const batchCreateFolders = (data) => {
+  return request({
+    url: '/api/files/folder/batch-create',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 重命名文件/文件夹
+ * @param {number} fileId - 文件ID
+ * @param {string} newName - 新名称
+ */
+export const renameFile = (fileId, newName) => {
+  return request({
+    url: `/api/files/${fileId}/rename`,
+    method: 'put',
+    params: { newName }
+  })
+}
+
+/**
+ * 移动文件/文件夹
+ * @param {number} fileId - 文件ID
+ * @param {number} targetParentId - 目标父文件夹ID
+ */
+export const moveFile = (fileId, targetParentId) => {
+  return request({
+    url: `/api/files/${fileId}/move`,
+    method: 'put',
+    params: { targetParentId }
+  })
+}
+
+/**
+ * 搜索文件
+ * @param {string} keyword - 搜索关键词
+ * @param {number} pageNum - 页码
+ * @param {number} pageSize - 每页条数
+ */
+export const searchFiles = (keyword, pageNum = 1, pageSize = 20) => {
+  return request({
+    url: '/api/files/search',
+    method: 'get',
+    params: { keyword, pageNum, pageSize }
+  })
+}
+
+// ==================== 秒传相关 ====================
+
+/**
+ * 秒传检查
+ * @param {Object} params - { filename, contentHash, fileSize, parentId, bucketId, mimeType }
+ */
+export const checkFileExists = (params) => {
+  return request({
+    url: '/api/files/check',
+    method: 'post',
+    params
+  })
+}
+
+// ==================== 分片上传相关 ====================
+
+/**
+ * 初始化分片上传
+ * @param {Object} data - ChunkUploadRequest body
+ */
+export const initChunkUpload = (data) => {
+  return request({
+    url: '/api/files/chunk/init',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 上传单个分片
+ * @param {FormData} formData - 包含 uploadId, chunkIndex, chunk, chunkHash, randomOffset, randomLength, randomHash
+ * @param {Function} onUploadProgress - 上传进度回调
+ */
+export const uploadChunk = (formData, onUploadProgress) => {
+  return request({
+    url: '/api/files/chunk/upload',
     method: 'post',
     data: formData,
     headers: {
@@ -23,177 +190,26 @@ export const uploadFile = (formData, onUploadProgress) => {
 }
 
 /**
- * 下载文件
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @returns {Promise<Blob>} - 文件 Blob 对象
+ * 完成分片上传（合并分片）
+ * @param {string} uploadId - 上传任务ID
+ * @param {string} fileHash - 文件完整hash
  */
-export const downloadFile = (fileId) => {
+export const completeChunkUpload = (uploadId, fileHash) => {
   return request({
-    url: `/files/download/${fileId}`,
-    method: 'get',
-    responseType: 'blob'
-  })
-}
-
-/**
- * 删除文件
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @returns {Promise} - 删除结果
- */
-export const deleteFile = (fileId) => {
-  return request({
-    url: `/files/delete/${fileId}`,
-    method: 'delete'
-  })
-}
-
-// 创建文件夹
-export const createFolder = (data) => {
-  return request({
-    url: '/files/folder',
+    url: '/api/files/chunk/complete',
     method: 'post',
-    data
+    params: { uploadId, fileHash }
   })
 }
 
 /**
- * 重命名文件/文件夹
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @param {string} newName - 新文件名
- * @returns {Promise} - 重命名结果
+ * 取消分片上传
+ * @param {string} uploadId - 上传任务ID
  */
-export const renameFile = (fileId, newName) => {
+export const cancelChunkUpload = (uploadId) => {
   return request({
-    url: `/files/rename/${fileId}`,
-    method: 'put',
-    data: { name: newName }
-  })
-}
-
-/**
- * 移动文件/文件夹
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @param {string} targetPath - 目标路径
- * @returns {Promise} - 移动结果
- */
-export const moveFile = (fileId, targetPath) => {
-  return request({
-    url: `/files/move/${fileId}`,
-    method: 'put',
-    data: { targetPath }
-  })
-}
-
-// ====== 文件预览相关 ======
-
-/**
- * 获取文件预览URL（预签名URL）
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @param {Object} options - 预览选项
- * @param {number} options.expireMinutes - 过期时间（分钟）
- * @param {string} options.operation - 操作类型
- * @param {boolean} options.watermark - 是否添加水印
- * @param {string} options.quality - 质量等级
- * @returns {Promise} - 预览URL对象
- */
-export const getPreviewUrl = (fileId, options = {}) => {
-  return request({
-    url: `/api/files/${fileId}/preview-url`,
-    method: 'post',
-    data: {
-      expireMinutes: options.expireMinutes || 30,
-      operation: options.operation || 'preview',
-      watermark: options.watermark || false,
-      quality: options.quality || 'medium'
-    }
-  })
-}
-
-/**
- * 批量获取预览URL
- * @param {string[]} fileIds - 文件ID数组（雪花ID，必须为字符串）
- * @param {Object} options - 预览选项
- * @returns {Promise} - 预览URL列表
- */
-export const getBatchPreviewUrls = (fileIds, options = {}) => {
-  return request({
-    url: '/api/files/batch/preview-urls',
-    method: 'post',
-    data: {
-      fileIds,
-      expireMinutes: options.expireMinutes || 30,
-      operation: options.operation || 'preview'
-    }
-  })
-}
-
-/**
- * 检查文件预览权限
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @param {string} operation - 操作类型，默认为 'preview'
- * @returns {Promise} - 权限检查结果
- */
-export const checkFilePermission = (fileId, operation = 'preview') => {
-  return request({
-    url: `/api/files/${fileId}/check-permission`,
-    method: 'post',
-    data: { operation }
-  })
-}
-
-/**
- * 获取文件详细信息
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @returns {Promise} - 文件信息对象
- */
-export const getFileInfo = (fileId) => {
-  return request({
-    url: `/api/files/${fileId}/info`,
-    method: 'get'
-  })
-}
-
-/**
- * 记录文件访问日志
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @param {Object} accessInfo - 访问信息
- * @returns {Promise} - 日志记录结果
- */
-export const logFileAccess = (fileId, accessInfo) => {
-  return request({
-    url: `/api/files/${fileId}/access-log`,
-    method: 'post',
-    data: {
-      operation: accessInfo.operation || 'preview',
-      userAgent: navigator.userAgent,
-      ipAddress: accessInfo.ipAddress,
-      accessSource: accessInfo.accessSource || 'web'
-    }
-  })
-}
-
-/**
- * 刷新预览缓存
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @param {string} cacheType - 缓存类型，默认为 'presigned_url'
- * @returns {Promise} - 刷新结果
- */
-export const refreshPreviewCache = (fileId, cacheType = 'presigned_url') => {
-  return request({
-    url: `/api/files/${fileId}/cache/refresh`,
-    method: 'post',
-    data: { cacheType }
-  })
-}
-
-/**
- * 获取缓存状态
- * @param {string} fileId - 文件ID（雪花ID，必须为字符串）
- * @returns {Promise} - 缓存状态对象
- */
-export const getCacheStatus = (fileId) => {
-  return request({
-    url: `/api/files/${fileId}/cache/status`,
-    method: 'get'
+    url: '/api/files/chunk/cancel',
+    method: 'delete',
+    params: { uploadId }
   })
 }

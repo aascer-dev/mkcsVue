@@ -3,7 +3,7 @@
     <!-- 欢迎区域 -->
     <section class="welcome-section">
       <h2 class="section-title">欢迎使用 CloudDrive</h2>
-      
+
       <!-- 快速访问 -->
       <div class="quick-access">
         <h3 class="subsection-title">快速访问</h3>
@@ -39,9 +39,9 @@
       <div class="recent-files">
         <h3 class="subsection-title">最近文件</h3>
         <div class="files-grid" v-if="recentFiles.length">
-          <div 
-            class="file-card" 
-            v-for="file in recentFiles" 
+          <div
+            class="file-card"
+            v-for="file in recentFiles"
             :key="file.id"
             @click="openFile(file)"
           >
@@ -60,22 +60,45 @@
         <el-empty v-else description="暂无最近文件" />
       </div>
 
+      <!-- 用户存储使用情况 -->
+      <div class="storage-overview" v-if="userStore.totalStorage > 0">
+        <h3 class="subsection-title">存储使用情况</h3>
+        <div class="storage-card">
+          <div class="storage-icon">
+            <el-icon size="32"><DataLine /></el-icon>
+          </div>
+          <div class="storage-content">
+            <div class="storage-header">
+              <span class="storage-label">总存储空间</span>
+              <span class="storage-value">
+                {{ formatFileSize(userStore.usedStorage) }} / {{ formatFileSize(userStore.totalStorage) }}
+              </span>
+            </div>
+            <el-progress
+              :percentage="userStore.storagePercentage"
+              :stroke-width="8"
+              :color="getStorageColor(userStore.storagePercentage)"
+            />
+          </div>
+        </div>
+      </div>
+
       <!-- 推荐文件夹 -->
-      <div class="suggested-section">
+      <!-- <div class="suggested-section">
         <h3 class="subsection-title">我的存储桶</h3>
         <div class="suggested-grid" v-if="myBuckets.length > 0">
-          <div 
-            class="suggested-card" 
-            v-for="bucket in myBuckets" 
+          <div
+            class="suggested-card"
+            v-for="bucket in myBuckets"
             :key="bucket.id"
             @click="$router.push('/files')"
           >
             <el-icon size="24" class="suggested-icon"><Box /></el-icon>
             <div class="bucket-card-info">
               <span class="bucket-card-name">{{ bucket.name }}</span>
-              <el-progress 
-                :percentage="getStoragePercentage(bucket)" 
-                :stroke-width="4" 
+              <el-progress
+                :percentage="getStoragePercentage(bucket)"
+                :stroke-width="4"
                 :show-text="false"
                 class="bucket-card-progress"
               />
@@ -89,10 +112,10 @@
         <div v-else class="suggested-grid">
           <div class="suggested-card" @click="$router.push('/settings')">
             <el-icon size="24" class="suggested-icon"><Box /></el-icon>
-            <span>创建第一个存储桶</span>
+            <span>{{ userStore.hasRole('ROLE_VIP') ? '创建第一个存储空间' : '创建存储空间 (VIP专享)' }}</span>
           </div>
         </div>
-      </div>
+      </div> -->
     </section>
   </div>
 </template>
@@ -105,19 +128,19 @@ import {
   Picture,
   VideoPlay,
   Folder,
-  Box
+  Box,
+  DataLine
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user.js'
-import { getMyBuckets, getDefaultBucket } from '@/api/user.js'
+import { getMyBuckets } from '@/api/user.js'
 import { formatFileSize } from '@/utils/index.js'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 // 存储桶数据
-const defaultBucket = ref(null)
 const myBuckets = ref([])
-const loadingBuckets = ref(false)
+const loadingBuckets = ref(true)
 
 // 最近文件（从默认桶渲染占位信息）
 const recentFiles = ref([])
@@ -125,16 +148,11 @@ const recentFiles = ref([])
 onMounted(async () => {
   loadingBuckets.value = true
   try {
-    const [buckets, defBucket] = await Promise.allSettled([
-      getMyBuckets(),
-      getDefaultBucket()
-    ])
-    if (buckets.status === 'fulfilled') {
-      myBuckets.value = Array.isArray(buckets.value) ? buckets.value : []
-    }
-    if (defBucket.status === 'fulfilled') {
-      defaultBucket.value = defBucket.value
-    }
+    const buckets = await getMyBuckets()
+    const bucketsList = Array.isArray(buckets) ? buckets : []
+    myBuckets.value = bucketsLis
+    // 调用store方法来计算存储空间
+    userStore.setMyBuckets(bucketsList)
   } catch (error) {
     console.error('加载数据失败:', error)
   } finally {
@@ -153,8 +171,19 @@ const openFile = (file) => {
 }
 
 const getStoragePercentage = (bucket) => {
-  if (!bucket || !bucket.totalStorage) return 0
-  return Math.min(Math.round((bucket.usedStorage || 0) / bucket.totalStorage * 100), 100)
+  if (!bucket) return 0
+  const total = Number(bucket.totalStorage) || 0
+  const used = Number(bucket.usedStorage) || 0
+  if (total <= 0) return 0
+  const percentage = Math.round((used / total) * 100)
+  return isNaN(percentage) ? 0 : Math.min(Math.max(percentage, 0), 100)
+}
+
+// 根据存储使用百分比返回颜色
+const getStorageColor = (percentage) => {
+  if (percentage >= 90) return '#f56c6c'
+  if (percentage >= 70) return '#e6a23c'
+  return '#67c23a'
 }
 </script>
 
@@ -298,6 +327,55 @@ const getStoragePercentage = (bucket) => {
 /* 建议文件夹 */
 .suggested-section {
   margin-bottom: 40px;
+}
+
+/* 存储使用情况 */
+.storage-overview {
+  margin-bottom: 40px;
+}
+
+.storage-card {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  color: #fff;
+}
+
+.storage-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.storage-content {
+  flex: 1;
+}
+
+.storage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.storage-label {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.storage-value {
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .suggested-grid {

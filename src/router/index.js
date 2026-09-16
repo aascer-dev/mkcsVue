@@ -4,8 +4,10 @@ import MainLayout from '@/layouts/MainLayout.vue'
 import Landing from '@/views/Landing.vue'
 import Home from '@/views/Home.vue'
 import Login from '@/views/Login.vue'
+import ForgotPassword from '@/views/ForgotPassword.vue'
 import FileManager from '@/views/FileManager.vue'
 import Settings from '@/views/Settings.vue'
+import ChangeEmailVerification from '@/views/ChangeEmailVerification.vue'
 import OAuthCallback from '@/views/OAuthCallback.vue'
 import OAuth2EmailBinding from '@/views/OAuth2EmailBinding.vue'
 import OAuth2UsernameSelection from '@/views/OAuth2UsernameSelection.vue'
@@ -63,6 +65,19 @@ const routes = [
       }
     ],
     meta: { isRegister: true, guest: true }
+  },
+  {
+    path: '/forgot-password',
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'ForgotPassword',
+        component: ForgotPassword,
+        meta: { guest: true }
+      }
+    ],
+    meta: { guest: true }
   },
   {
     path: '/oauth/callback',
@@ -130,6 +145,18 @@ const routes = [
       }
     ],
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/change-email-verification',
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'ChangeEmailVerification',
+        component: ChangeEmailVerification
+      }
+    ],
+    meta: { requiresAuth: true }
   }
 ]
 
@@ -142,8 +169,8 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   
-  // 如果是初始化状态，尝试恢复登录状态
-  if (userStore.token && !userStore.userInfo) {
+  // 每次进入页面都从服务端同步用户信息，避免仅使用本地缓存的旧头像或资料。
+  if (userStore.token) {
     try {
       await userStore.initialize()
     } catch (error) {

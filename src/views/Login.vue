@@ -50,7 +50,7 @@
         
         <div class="form-options">
           <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-          <a href="#" class="forgot-link">忘记密码？</a>
+          <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
         </div>
         
         <el-button
@@ -308,6 +308,15 @@ const loginForm = reactive({
   password: ''
 })
 
+const applyPrefillEmail = () => {
+  const emailFromQuery = typeof route.query.email === 'string' ? route.query.email.trim() : ''
+  if (emailFromQuery) {
+    loginForm.username = emailFromQuery
+  }
+}
+
+applyPrefillEmail()
+
 const registerForm = reactive({
   username: '',
   email: '',
@@ -315,6 +324,16 @@ const registerForm = reactive({
   password: '',
   confirmPassword: ''
 })
+
+const startCooldown = (cooldownRef, seconds = 60) => {
+  cooldownRef.value = seconds
+  const timer = setInterval(() => {
+    cooldownRef.value--
+    if (cooldownRef.value <= 0) {
+      clearInterval(timer)
+    }
+  }, 1000)
+}
 
 // 检查是否可以进入第二步
 const canProceedToStep2 = computed(() => {
@@ -427,17 +446,12 @@ const handleSendCode = async () => {
       return
     }
     
+    // 【重点】这里是“发送验证码”的实际调用（注册场景）
     await sendVerificationCode(registerForm.email, 'REGISTER')
     ElMessage.success('验证码已发送到您的邮箱')
     
     // 开始倒计时
-    codeCooldown.value = 60
-    const timer = setInterval(() => {
-      codeCooldown.value--
-      if (codeCooldown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
+    startCooldown(codeCooldown, 60)
   } catch (error) {
     console.error('发送验证码失败:', error)
     ElMessage.error(error.message || '发送验证码失败，请重试')
@@ -589,6 +603,7 @@ const resetRegisterState = () => {
 watch(() => route.path, (newPath) => {
   if (newPath === '/login') {
     resetRegisterState()
+    applyPrefillEmail()
   }
 })
 </script>

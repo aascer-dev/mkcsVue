@@ -4,9 +4,9 @@ import { useUserStore } from '@/stores/user.js'
 
 // 需要在请求成功后刷新用户状态的 API 路径
 const REFRESH_AUTH_PATHS = [
-  '/files/upload',
-  '/files/delete',
-  '/files/move',
+  '/api/files/upload',
+  '/api/files/delete',
+  '/api/files/move',
   '/api/users/profile',
   '/api/users/avatar',
   '/api/auth/oauth2/bindings'
@@ -26,11 +26,26 @@ request.interceptors.request.use(
   config => {
     const userStore = useUserStore()
     const token = userStore.getToken
-    
+
+    console.debug(`[Request] ${config.method?.toUpperCase()} ${config.url}`)
+    console.debug(`[Token] 存在: ${!!token}, 长度: ${token?.length || 0}`)
+
+    // 保存原有的headers
+    const originalHeaders = config.headers || {}
+
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      // 合并: 保留原有headers，添加token header
+      config.headers = {
+        ...originalHeaders,
+        mkcs: `Bearer ${token}`
+      }
+      console.debug(`[Request] mkcs header 已设置: Bearer ${token.substring(0, 20)}...`)
+      console.debug(`[Request] Content-Type: ${config.headers['Content-Type'] || 'auto'}`)
+    } else {
+      config.headers = originalHeaders
+      console.warn(`[Request] 缺少 token！`)
     }
-    
+
     return config
   },
   error => {
@@ -43,18 +58,18 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   async response => {
     const resData = response.data
-    
+
     // 如果响应是 blob 类型（如文件下载），直接返回
     if (response.config.responseType === 'blob') {
       return resData
     }
-    
+
     let result = resData
-    
+
     // 标准 JSON 响应格式: { code, message, data, timestamp }
     if (resData && typeof resData === 'object' && 'code' in resData) {
       const { code, message, data } = resData
-      
+
       if (code === 200 || code === 0 || code === 201) {
         result = data
       } else {
@@ -66,18 +81,18 @@ request.interceptors.response.use(
         return Promise.reject(error)
       }
     }
-    
+
     // 检查是否需要刷新用户状态
     const requestUrl = response.config.url || ''
-    const needsRefresh = REFRESH_AUTH_PATHS.some(path => 
+    const needsRefresh = REFRESH_AUTH_PATHS.some(path =>
       requestUrl.includes(path)
     )
-    
+
     // 如果需要刷新且请求方法是修改类操作（POST, PUT, DELETE, PATCH）
     const isModifyingRequest = ['post', 'put', 'delete', 'patch'].includes(
       response.config.method?.toLowerCase() || ''
     )
-    
+
     if (needsRefresh && isModifyingRequest) {
       try {
         const userStore = useUserStore()
@@ -89,21 +104,25 @@ request.interceptors.response.use(
         console.warn('自动刷新用户状态失败:', error)
       }
     }
-    
+
     return result
   },
   error => {
     console.error('响应错误:', error)
-    
+
+    if (error.code === 'ERR_CANCELED' || error.name === 'CanceledError') {
+      return Promise.reject(error)
+    }
+
     // 检查是否是CORS错误
     if (error.message?.includes('CORS') || error.code === 'ERR_NETWORK') {
       ElMessage.error('网络请求失败，请检查后端服务是否运行')
       return Promise.reject(error)
     }
-    
+
     if (error.response) {
       const { status, data } = error.response
-      
+
       // 后端返回的业务错误（如 401 带 JSON body）
       if (data && typeof data === 'object' && 'code' in data) {
         const bizError = new Error(data.message || '请求失败')
@@ -111,16 +130,16 @@ request.interceptors.response.use(
         bizError.data = data.data
         bizError.status = status
         bizError.response = error.response
-        
+
         // 401 未授权 - 清除登录状态
         if (status === 401) {
           const userStore = useUserStore()
           userStore.clearAuth()
         }
-        
+
         return Promise.reject(bizError)
       }
-      
+
       // 非 JSON 错误响应
       switch (status) {
         case 401:
@@ -148,7 +167,7 @@ request.interceptors.response.use(
     } else {
       ElMessage.error('请求配置错误')
     }
-    
+
     return Promise.reject(error)
   }
 )

@@ -3,11 +3,42 @@
     <div class="settings-container">
       <div class="settings-header">
         <h1>账号设置</h1>
-        <p>管理您的个人信息、存储桶和账号关联</p>
+        <p>管理您的个人信息、存储空间和账号关联</p>
         <el-button class="close-btn" circle @click="handleClose">
           <el-icon><Close /></el-icon>
         </el-button>
       </div>
+
+      <!-- 主题切换卡片
+      <div class="settings-card">
+        <div class="card-title">
+          <el-icon><Sunny /></el-icon>
+          <span>主题设置</span>
+        </div>
+
+        <div class="setting-item">
+          <div class="item-label">暗黑模式</div>
+          <div class="item-content theme-switch">
+            <div class="theme-switch-info">
+              <el-icon :size="24" class="theme-icon">
+                <Moon v-if="themeStore.isDark" />
+                <Sunny v-else />
+              </el-icon>
+              <div>
+                <div class="theme-title">{{ themeStore.isDark ? '暗黑模式' : '明亮模式' }}</div>
+                <div class="theme-desc">{{ themeStore.isDark ? '减少眼睛疲劳，适合暗光环境' : '明亮清晰，适合日常使用' }}</div>
+              </div>
+            </div>
+            <el-switch
+              v-model="themeStore.isDark"
+              size="large"
+              inline-promp
+              :active-icon="Moon"
+              :inactive-icon="Sunny"
+            />
+          </div>
+        </div>
+      </div> -->
 
       <!-- 基本信息卡片 -->
       <div class="settings-card">
@@ -43,30 +74,15 @@
                   <el-icon class="is-loading"><Loading /></el-icon>
                   压缩中...
                 </span>
+                <span v-if="updatingAvatar" class="compressing-hint">
+                  <el-icon class="is-loading"><Loading /></el-icon>
+                  上传中...
+                </span>
               </div>
-              <el-input
-                v-model="form.avatarUrl"
-                placeholder="或输入头像URL"
-                class="glass-input"
-                style="max-width: 400px;"
-                @input="previewAvatarUrl = form.avatarUrl"
-              >
-                <template #prepend>
-                  <el-icon><Picture /></el-icon>
-                </template>
-              </el-input>
-              <div class="button-group">
+              <div v-if="avatarFile" class="button-group">
                 <el-button
-                  type="primary"
-                  :loading="updatingAvatar"
-                  :disabled="!avatarFile && !avatarUrlChanged"
-                  @click="updateAvatar"
-                >
-                  {{ avatarFile ? '上传头像' : '更新头像' }}
-                </el-button>
-                <el-button
-                  v-if="avatarFile || avatarUrlChanged"
                   @click="resetAvatar"
+                  :disabled="updatingAvatar"
                 >
                   重置
                 </el-button>
@@ -161,21 +177,54 @@
             <div class="hint-text">用户名不可修改</div>
           </div>
         </div>
+
+        <!-- 存储使用情况 -->
+        <div class="setting-item">
+          <div class="item-label">存储空间</div>
+          <div class="item-content">
+            <div class="storage-info">
+              <el-progress
+                :percentage="userStore.storagePercentage"
+                :stroke-width="12"
+                :color="getStorageColor(userStore.storagePercentage)"
+              >
+                <span class="storage-percentage">{{ userStore.storagePercentage }}%</span>
+              </el-progress>
+              <div class="storage-details">
+                <span class="storage-used">已使用 {{ formatFileSize(userStore.usedStorage) }}</span>
+                <span class="storage-divider">/</span>
+                <span class="storage-total">总容量 {{ formatFileSize(userStore.totalStorage) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- 存储桶管理卡片 -->
+      <!-- 安全设置卡片 -->
+      <div class="settings-card">
+        <div class="card-title">
+          <el-icon><Edit /></el-icon>
+          <span>安全设置</span>
+        </div>
+
+        <!-- 修改密码按钮 -->
+        <div class="setting-item">
+          <div class="item-label">修改密码</div>
+          <div class="item-content">
+            <p class="security-tip">定期修改密码可以提高账户安全性</p>
+            <el-button type="primary" @click="showChangePasswordDialog = true">
+              <el-icon><Edit /></el-icon>
+              修改密码
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 存储空间管理卡片 -->
       <div class="settings-card">
         <div class="card-title">
           <el-icon><Box /></el-icon>
-          <span>存储桶管理</span>
-          <el-button type="primary" size="small" style="margin-left: auto;" @click="showCreateBucket = true">
-            <el-icon><Plus /></el-icon>
-            新建存储桶
-          </el-button>
-          <el-button size="small" :loading="syncingBuckets" @click="handleSyncBuckets">
-            <el-icon><Refresh /></el-icon>
-            同步
-          </el-button>
+          <span>存储空间管理</span>
         </div>
 
         <div v-if="loadingBuckets" class="setting-item">
@@ -183,74 +232,177 @@
         </div>
 
         <div v-else>
-          <div
-            v-for="bucket in myBuckets"
-            :key="bucket.id"
-            class="bucket-item"
-            :class="{ 'is-default': String(bucket.id) === String(userStore.userInfo?.currentBucketId) }"
-          >
-            <div class="bucket-info">
-              <div class="bucket-icon">
-                <el-icon size="24"><Box /></el-icon>
+          <!-- 自己的存储空间 -->
+          <div v-if="myOwnBuckets.length > 0" style="margin-bottom: 24px;">
+            <div style="font-size: 14px; color: #666; margin-bottom: 12px; font-weight: 600;">
+              <el-icon size="16" style="margin-right: 6px; vertical-align: -2px;"><Box /></el-icon>
+              我的存储空间
+            </div>
+            <div
+              v-for="bucket in myOwnBuckets"
+              :key="bucket.id"
+              class="bucket-item"
+              :class="{ 'is-default': String(bucket.id) === String(userStore.userInfo?.currentBucketId) }"
+            >
+              <div class="bucket-info">
+                <div class="bucket-icon">
+                  <el-icon size="24"><Box /></el-icon>
+                </div>
+                <div class="bucket-details">
+                  <div class="bucket-name">
+                    {{ bucket.description || bucket.name }}
+                    <el-tag v-if="String(bucket.id) === String(userStore.userInfo?.currentBucketId)" size="small" type="success">默认</el-tag>
+                    <el-tag v-if="bucket.status === 0" size="small" type="danger">禁用</el-tag>
+                    <el-tag v-if="bucket.status === 2" size="small" type="warning">只读</el-tag>
+                  </div>
+                  <div class="bucket-storage">
+                    <el-progress
+                      :percentage="getStoragePercentage(bucket)"
+                      :stroke-width="6"
+                      class="bucket-progress"
+                    />
+                    <span class="storage-text">
+                      {{ formatFileSize(bucket.usedStorage || 0) }} / {{ formatFileSize(bucket.totalStorage || 0) }}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div class="bucket-details">
-                <div class="bucket-name">
-                  {{ bucket.description || bucket.name }}
-                  <el-tag v-if="String(bucket.id) === String(userStore.userInfo?.currentBucketId)" size="small" type="success">默认</el-tag>
-                  <el-tag v-if="bucket.bucketType === 1" size="small" type="info">共享</el-tag>
-                  <el-tag v-if="bucket.status === 0" size="small" type="danger">禁用</el-tag>
-                  <el-tag v-if="bucket.status === 2" size="small" type="warning">只读</el-tag>
-                </div>
-                <div class="bucket-meta">
-                  ID: {{ bucket.name }}
-                </div>
-                <div class="bucket-storage">
-                  <el-progress
-                    :percentage="getStoragePercentage(bucket)"
-                    :stroke-width="6"
-                    class="bucket-progress"
-                  />
-                  <span class="storage-text">
-                    {{ formatFileSize(bucket.usedStorage || 0) }} / {{ formatFileSize(bucket.totalStorage || 0) }}
-                  </span>
-                </div>
+              <div class="bucket-actions">
+                <el-button
+                  v-if="String(bucket.id) !== String(userStore.userInfo?.currentBucketId)"
+                  type="primary"
+                  plain
+                  size="small"
+                  :loading="String(settingDefault) === String(bucket.id)"
+                  @click="handleSetDefault(bucket.id)"
+                >
+                  设为默认
+                </el-button>
+                <el-button
+                  size="small"
+                  plain
+                  @click="handleEditBucket(bucket)"
+                >
+                  编辑
+                </el-button>
               </div>
             </div>
-            <div class="bucket-actions">
-              <el-button
-                v-if="String(bucket.id) !== String(userStore.userInfo?.currentBucketId)"
-                type="primary"
-                plain
-                size="small"
-                :loading="String(settingDefault) === String(bucket.id)"
-                @click="handleSetDefault(bucket.id)"
-              >
-                设为默认
-              </el-button>
-              <el-button
-                size="small"
-                plain
-                @click="handleEditBucket(bucket)"
-              >
-                编辑
-              </el-button>
-              <el-button
-                type="danger"
-                plain
-                size="small"
-                :loading="String(deletingBucket) === String(bucket.id)"
-                @click="handleDeleteBucket(bucket)"
-              >
-                删除
-              </el-button>
+          </div>
+
+          <!-- 共享的存储空间 -->
+          <div v-if="mySharedBuckets.length > 0">
+            <div style="font-size: 14px; color: #666; margin-bottom: 12px; font-weight: 600;">
+              <el-icon size="16" style="margin-right: 6px; vertical-align: -2px;"><Link /></el-icon>
+              他人共享的存储空间
+            </div>
+            <div
+              v-for="bucket in mySharedBuckets"
+              :key="bucket.id"
+              class="bucket-item"
+              :class="{ 'is-default': String(bucket.id) === String(userStore.userInfo?.currentBucketId) }"
+            >
+              <div class="bucket-info">
+                <div class="bucket-icon">
+                  <el-icon size="24"><Box /></el-icon>
+                </div>
+                <div class="bucket-details">
+                  <div class="bucket-name">
+                    {{ bucket.description || bucket.name }}
+                    <el-tag v-if="String(bucket.id) === String(userStore.userInfo?.currentBucketId)" size="small" type="success">默认</el-tag>
+                    <el-tag size="small" type="info">共享</el-tag>
+                    <el-tag v-if="bucket.status === 0" size="small" type="danger">禁用</el-tag>
+                    <el-tag v-if="bucket.status === 2" size="small" type="warning">只读</el-tag>
+                  </div>
+                  <div class="bucket-storage">
+                    <el-progress
+                      :percentage="getStoragePercentage(bucket)"
+                      :stroke-width="6"
+                      class="bucket-progress"
+                    />
+                    <span class="storage-text">
+                      {{ formatFileSize(bucket.usedStorage || 0) }} / {{ formatFileSize(bucket.totalStorage || 0) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="bucket-actions">
+                <el-button
+                  v-if="String(bucket.id) !== String(userStore.userInfo?.currentBucketId)"
+                  type="primary"
+                  plain
+                  size="small"
+                  :loading="String(settingDefault) === String(bucket.id)"
+                  @click="handleSetDefault(bucket.id)"
+                >
+                  设为默认
+                </el-button>
+              </div>
             </div>
           </div>
 
           <el-empty
             v-if="myBuckets.length === 0"
-            description="暂无存储桶，请先创建"
+            description="暂无存储空间"
             :image-size="80"
-          />
+          >
+            <template #default>
+              <div>
+                <p>暂无存储空间</p>
+                <p style="font-size: 12px; color: #999; margin: 8px 0 0 0;">
+                  <span v-if="userStore.hasRole('ROLE_VIP')">点击下方创建新的存储空间</span>
+                  <span v-else>升级至VIP可创建存储空间</span>
+                </p>
+                <el-button
+                  v-if="userStore.hasRole('ROLE_VIP')"
+                  key="empty-btn-vip"
+                  type="primary"
+                  :loading="creatingBucket"
+                  @click="showCreateBucket = true"
+                  style="margin-top: 16px;"
+                >
+                  <el-icon><Plus /></el-icon>
+                  创建存储空间
+                </el-button>
+                <el-button
+                  v-else
+                  key="empty-btn-non-vip"
+                  type="primary"
+                  disabled
+                  style="margin-top: 16px;"
+                >
+                  <el-icon><Plus /></el-icon>
+                  创建存储空间 (VIP专享)
+                </el-button>
+              </div>
+            </template>
+          </el-empty>
+
+          <div v-else style="margin-top: 16px;">
+            <el-button
+              v-if="userStore.hasRole('ROLE_VIP')"
+              key="btn-vip"
+              type="primary"
+              :loading="creatingBucket"
+              @click="showCreateBucket = true"
+            >
+              <el-icon><Plus /></el-icon>
+              创建存储空间
+            </el-button>
+            <el-tooltip
+              v-else
+              key="btn-non-vip"
+              content="仅VIP用户可创建存储空间"
+              placement="top"
+            >
+              <el-button
+                type="primary"
+                disabled
+              >
+                <el-icon><Plus /></el-icon>
+                创建存储空间
+              </el-button>
+            </el-tooltip>
+          </div>
         </div>
       </div>
 
@@ -306,11 +458,11 @@
       </div>
     </div>
 
-    <!-- 新建存储桶对话框 -->
-    <el-dialog v-model="showCreateBucket" title="新建存储桶" width="450px" :close-on-click-modal="false">
+    <!-- 新建存储空间对话框 -->
+    <el-dialog v-model="showCreateBucket" title="创建存储空间" width="450px" :close-on-click-modal="false">
       <el-form :model="bucketForm" :rules="bucketRules" ref="bucketFormRef" label-width="80px">
-        <el-form-item label="桶名称" prop="bucketName">
-          <el-input v-model="bucketForm.bucketName" placeholder="请输入存储桶名称" />
+        <el-form-item label="空间名称" prop="bucketName">
+          <el-input v-model="bucketForm.bucketName" placeholder="请输入存储空间名称" />
         </el-form-item>
         <el-form-item label="描述" prop="description">
           <el-input v-model="bucketForm.description" type="textarea" :rows="3" placeholder="请输入描述（可选）" />
@@ -322,10 +474,10 @@
       </template>
     </el-dialog>
 
-    <!-- 编辑存储桶对话框 -->
-    <el-dialog v-model="showEditBucket" title="编辑存储桶" width="450px" :close-on-click-modal="false">
+    <!-- 编辑存储空间对话框 -->
+    <el-dialog v-model="showEditBucket" title="编辑存储空间" width="450px" :close-on-click-modal="false">
       <el-form :model="editBucketForm" label-width="80px">
-        <el-form-item label="桶名称">
+        <el-form-item label="空间名称">
           <el-input :model-value="editBucketForm.name" disabled />
         </el-form-item>
         <el-form-item label="描述">
@@ -337,20 +489,120 @@
         <el-button type="primary" :loading="editingBucket" @click="handleUpdateBucket">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 修改密码对话框 -->
+    <el-dialog v-model="showChangePasswordDialog" title="修改密码" width="500px" :close-on-click-modal="false" @close="resetPasswordForm">
+      <!-- 第一步：输入新密码 -->
+      <div v-if="passwordStep === 1">
+        <el-form
+          ref="passwordFormRef"
+          :model="passwordForm"
+          :rules="passwordRulesInDialog"
+          label-width="100px"
+          label-position="left"
+        >
+          <el-form-item label="新密码" prop="newPassword">
+            <el-input
+              v-model="passwordForm.newPassword"
+              type="password"
+              placeholder="请输入新密码（6-64位）"
+              show-password
+              class="glass-input"
+            >
+              <template #prefix>
+                <el-icon><Lock /></el-icon>
+              </template>
+            </el-input>
+          </el-form-item>
+
+          <el-form-item label="确认密码" prop="confirmPassword">
+            <el-input
+              v-model="passwordForm.confirmPassword"
+              type="password"
+              placeholder="请再次输入新密码"
+              show-password
+              class="glass-input"
+            >
+              <template #prefix>
+                <el-icon><Lock /></el-icon>
+              </template>
+            </el-input>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 第二步：输入验证码 -->
+      <div v-else-if="passwordStep === 2">
+        <div class="step-info">
+          <el-icon><Message /></el-icon>
+          <div class="step-info-text">
+            <p>验证码已发送至您的邮箱</p>
+            <p class="email-display">{{ userStore.userInfo?.email }}</p>
+          </div>
+        </div>
+
+        <el-form
+          ref="verificationFormRef"
+          :model="verificationForm"
+          :rules="verificationRules"
+          label-width="100px"
+          label-position="left"
+          style="margin-top: 16px;"
+        >
+          <el-form-item label="验证码" prop="code">
+            <div class="code-input-group">
+              <el-input
+                v-model="verificationForm.code"
+                placeholder="请输入6位验证码"
+                maxlength="6"
+                class="glass-input code-input"
+              />
+              <el-button
+                type="primary"
+                :loading="sendingCode"
+                :disabled="codeCooldown > 0 || sendingCode"
+                @click="handleSendVerificationCode"
+                class="send-code-btn"
+              >
+                {{ codeCooldown > 0 ? `${codeCooldown}s` : '发送' }}
+              </el-button>
+            </div>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="handleClosePasswordDialog">取消</el-button>
+          <template v-if="passwordStep === 1">
+            <el-button type="primary" :loading="changingPassword" @click="handleNextStep">下一步</el-button>
+          </template>
+          <template v-else-if="passwordStep === 2">
+            <el-button @click="handleBackToStep1">上一步</el-button>
+            <el-button type="primary" :loading="confirmingPassword" @click="handleConfirmChangePassword">确认修改</el-button>
+          </template>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User, Picture, Edit, Link, Platform, Box, Plus, Upload, Message, Refresh, Loading, Close } from '@element-plus/icons-vue'
+import { User, Picture, Edit, Link, Platform, Box, Plus, Upload, Message, Refresh, Loading, Close, Sunny, Moon, Lock } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user.js'
+import { useThemeStore } from '@/stores/theme.js'
 import { useRouter } from 'vue-router'
 import {
   uploadUserAvatar,
   updateUserProfile,
+  checkEmailAvailability,
   getOAuthBindings,
-  unbindOAuthProvider
+  unbindOAuthProvider,
+  resetPassword,
+  sendVerificationCode,
+  getVerificationCooldown
 } from '@/api/auth.js'
 import {
   getMyBuckets,
@@ -365,6 +617,7 @@ import { compressImage, validateImageFile, needsCompression } from '@/utils/imag
 import { API_CONFIG } from '@/config/api.js'
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const router = useRouter()
 
 // 关闭设置页面
@@ -387,12 +640,54 @@ const updatingNickname = ref(false)
 const updatingEmail = ref(false)
 const compressing = ref(false)
 
-const avatarUrlChanged = computed(() => {
-  return form.avatarUrl && form.avatarUrl !== (userStore.userInfo?.avatarUrl || '')
+// ====== 修改密码 ======
+const passwordStep = ref(1) // 1: 输入密码, 2: 输入验证码
+const showChangePasswordDialog = ref(false)
+const changingPassword = ref(false)
+const confirmingPassword = ref(false)
+const sendingCode = ref(false)
+const codeCooldown = ref(0)
+const passwordFormRef = ref()
+const verificationFormRef = ref()
+
+const passwordForm = reactive({
+  newPassword: '',
+  confirmPassword: ''
 })
 
-// ====== 存储桶 ======
-const loadingBuckets = ref(false)
+const verificationForm = reactive({
+  code: ''
+})
+
+const passwordRulesInDialog = {
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 64, message: '密码长度为6-64个字符', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== passwordForm.newPassword) {
+          callback(new Error('两次输入密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+const verificationRules = {
+  code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { pattern: /^\d{6}$/, message: '验证码必须为6位数字', trigger: 'blur' }
+  ]
+}
+
+// ====== 存储空间 ======
+const loadingBuckets = ref(true)
 const myBuckets = ref([])
 const showCreateBucket = ref(false)
 const showEditBucket = ref(false)
@@ -416,14 +711,23 @@ const editBucketForm = reactive({
 
 const bucketRules = {
   bucketName: [
-    { required: true, message: '请输入存储桶名称', trigger: 'blur' }
+    { required: true, message: '请输入存储空间名称', trigger: 'blur' }
   ]
 }
 
 // ====== OAuth ======
-const loadingOAuthBindings = ref(false)
+const loadingOAuthBindings = ref(true)
 const unbindingProvider = ref('')
 const oauthBindings = ref([])
+
+// 计算属性：分组存储桶
+const myOwnBuckets = computed(() => {
+  return myBuckets.value.filter(bucket => !bucket.bucketType || bucket.bucketType === 0)
+})
+
+const mySharedBuckets = computed(() => {
+  return myBuckets.value.filter(bucket => bucket.bucketType === 1)
+})
 
 // 初始化表单数据的函数
 const initFormData = () => {
@@ -465,7 +769,7 @@ const beforeAvatarUpload = (file) => {
 
 const handleAvatarChange = async (uploadFile) => {
   const file = uploadFile.raw
-  
+
   // 验证文件
   const validation = validateImageFile(file)
   if (!validation.valid) {
@@ -473,69 +777,66 @@ const handleAvatarChange = async (uploadFile) => {
     avatarUploadRef.value?.clearFiles()
     return
   }
-  
+
   try {
     // 检查是否需要压缩
     if (needsCompression(file)) {
       compressing.value = true
       ElMessage.info(`图片较大 (${formatFileSize(file.size)})，正在自动压缩...`)
-      
+
       // 压缩图片
       const compressedFile = await compressImage(file)
       avatarFile.value = compressedFile
       previewAvatarUrl.value = URL.createObjectURL(compressedFile)
-      
+
       ElMessage.success(`压缩完成！${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)}`)
     } else {
       avatarFile.value = file
       previewAvatarUrl.value = URL.createObjectURL(file)
     }
+
+    // 文件处理完成后自动上传
+    await performAvatarUpload()
   } catch (error) {
     console.error('图片处理失败:', error)
     ElMessage.error('图片处理失败: ' + error.message)
+    avatarFile.value = null
     avatarUploadRef.value?.clearFiles()
   } finally {
     compressing.value = false
   }
-  previewAvatarUrl.value = URL.createObjectURL(uploadFile.raw)
 }
-compressing.value = false
-  avatarUploadRef.value?.clearFiles()
-  
-const updateAvatar = async () => {
+
+const performAvatarUpload = async () => {
   updatingAvatar.value = true
   try {
-    if (avatarFile.value) {
-      const userId = userStore.userInfo?.id
-      if (!userId) {
-        ElMessage.error('获取用户信息失败')
-        return
-      }
-      const result = await uploadUserAvatar(userId, avatarFile.value)
-      const newAvatarUrl = result?.avatarUrl || result
-      userStore.setUserInfo({
-        ...userStore.userInfo,
-        avatarUrl: newAvatarUrl
-      })
-      form.avatarUrl = newAvatarUrl
-      previewAvatarUrl.value = newAvatarUrl
-      ElMessage.success('头像上传成功')
-      avatarFile.value = null
-    } else if (avatarUrlChanged.value) {
-      await updateUserProfile({ avatarUrl: form.avatarUrl })
-      userStore.setUserInfo({
-        ...userStore.userInfo,
-        avatarUrl: form.avatarUrl
-      })
-      previewAvatarUrl.value = form.avatarUrl
-      ElMessage.success('头像更新成功')
+    if (!avatarFile.value) {
+      return
     }
+
+    const userId = userStore.userInfo?.id
+    if (!userId) {
+      ElMessage.error('获取用户信息失败')
+      return
+    }
+
+    await uploadUserAvatar(userId, avatarFile.value)
+    const updatedUser = await userStore.refreshUserInfo()
+    form.avatarUrl = updatedUser.avatarUrl || ''
+    previewAvatarUrl.value = form.avatarUrl
+    ElMessage.success('头像上传成功')
+    avatarFile.value = null
+    avatarUploadRef.value?.clearFiles()
   } catch (error) {
-    console.error('更新头像失败:', error)
-    ElMessage.error(error.message || '更新失败')
+    console.error('上传头像失败:', error)
+    ElMessage.error(error.message || '上传失败')
   } finally {
     updatingAvatar.value = false
   }
+}
+
+const updateAvatar = async () => {
+  await performAvatarUpload()
 }
 
 const resetAvatar = () => {
@@ -585,39 +886,187 @@ const updateEmail = async () => {
 
   updatingEmail.value = true
   try {
-    await updateUserProfile({ email: form.email })
-    userStore.setUserInfo({
-      ...userStore.userInfo,
-      email: form.email
+    // 先检查邮箱是否可用，排除当前用户ID
+    const availabilityResult = await checkEmailAvailability(form.email, userStore.userInfo?.id)
+
+    // 检查是否可用，通常返回结果会包含available字段
+    const isAvailable = availabilityResult?.available !== false && availabilityResult !== false
+
+    if (!isAvailable) {
+      ElMessage.error('该邮箱已被其他用户使用，请使用其他邮箱')
+      return
+    }
+
+    // 邮箱可用，保存待变更的邮箱到临时存储
+    sessionStorage.setItem('pendingEmail', form.email)
+
+    ElMessage.success('跳转到验证页面')
+
+    // 跳转到邮箱变更验证页面，页面进入时会自动发送验证码
+    router.push({
+      name: 'ChangeEmailVerification',
+      query: { email: form.email }
     })
-    ElMessage.success('邮箱更新成功')
   } catch (error) {
-    console.error('更新邮箱失败:', error)
-    ElMessage.error(error.message || '更新失败')
+    console.error('邮箱更新失败:', error)
+    ElMessage.error(error.message || '操作失败，请稍后重试')
   } finally {
     updatingEmail.value = false
   }
 }
 
-// ====== 存储桶管理 ======
+// ====== 修改密码 ======
+const startCooldown = (seconds = 60) => {
+  codeCooldown.value = seconds
+  const timer = setInterval(() => {
+    codeCooldown.value--
+    if (codeCooldown.value <= 0) {
+      clearInterval(timer)
+    }
+  }, 1000)
+}
+
+const handleClosePasswordDialog = () => {
+  showChangePasswordDialog.value = false
+  // 重置状态
+  passwordStep.value = 1
+  resetPasswordForm()
+}
+
+const handleNextStep = async () => {
+  if (!passwordFormRef.value) return
+
+  await passwordFormRef.value.validate(async (valid) => {
+    if (!valid) return
+
+    // 切换到验证码步骤
+    passwordStep.value = 2
+
+    // 自动发送验证码
+    handleSendVerificationCode()
+  })
+}
+
+const handleSendVerificationCode = async () => {
+  const email = userStore.userInfo?.email
+  if (!email) {
+    ElMessage.error('无法获取邮箱地址')
+    return
+  }
+
+  sendingCode.value = true
+  try {
+    const cooldownResult = await getVerificationCooldown(email, 'CHANGE_PASSWORD')
+    if (!cooldownResult.canSend) {
+      const leftSeconds = cooldownResult.remainingSeconds || 60
+      startCooldown(leftSeconds)
+      ElMessage.warning(`验证码发送过于频繁，请${leftSeconds}秒后再试`)
+      return
+    }
+
+    // 发送验证码
+    await sendVerificationCode(email, 'CHANGE_PASSWORD')
+    ElMessage.success('验证码已发送到您的邮箱')
+    startCooldown(60)
+  } catch (error) {
+    console.error('发送验证码失败:', error)
+    ElMessage.error(error.message || '发送验证码失败，请重试')
+  } finally {
+    sendingCode.value = false
+  }
+}
+
+const handleConfirmChangePassword = async () => {
+  if (!verificationFormRef.value) return
+
+  await verificationFormRef.value.validate(async (valid) => {
+    if (!valid) return
+
+    confirmingPassword.value = true
+    try {
+      const email = userStore.userInfo?.email
+      if (!email) {
+        ElMessage.error('无法获取邮箱地址')
+        return
+      }
+
+      // 调用重置密码接口（和忘记密码使用同一个接口）
+      await resetPassword({
+        email: email,
+        code: verificationForm.code,
+        password: passwordForm.newPassword,
+        verificationCodeType: 'CHANGE_PASSWORD'
+      })
+
+      ElMessage.success('密码修改成功，请重新登录')
+
+      // 清除本地状态，强制用户重新登录
+      await userStore.logout()
+
+      // 跳转到登录页面
+      router.push({
+        path: '/login',
+        query: { message: '密码已修改，请使用新密码登录' }
+      })
+    } catch (error) {
+      console.error('修改密码失败:', error)
+      ElMessage.error(error.message || '修改密码失败，请稍后重试')
+    } finally {
+      confirmingPassword.value = false
+    }
+  })
+}
+
+const handleBackToStep1 = () => {
+  passwordStep.value = 1
+  verificationForm.code = ''
+  codeCooldown.value = 0
+}
+
+const resetPasswordForm = () => {
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  verificationForm.code = ''
+}
+
+// ====== 存储空间管理 ======
 const loadMyBuckets = async () => {
   loadingBuckets.value = true
   try {
     const result = await getMyBuckets()
-    myBuckets.value = Array.isArray(result) ? result : []
+    const bucketsList = Array.isArray(result) ? result : []
+    myBuckets.value = bucketsLis
+    // 调用store方法来计算存储空间
+    userStore.setMyBuckets(bucketsList)
   } catch (error) {
-    console.error('加载存储桶失败:', error)
+    console.error('加载存储空间失败:', error)
   } finally {
     loadingBuckets.value = false
   }
 }
 
 const getStoragePercentage = (bucket) => {
-  if (!bucket.totalStorage || bucket.totalStorage === 0) return 0
-  return Math.min(Math.round((bucket.usedStorage || 0) / bucket.totalStorage * 100), 100)
+  const total = Number(bucket.totalStorage) || 0
+  const used = Number(bucket.usedStorage) || 0
+  if (total <= 0) return 0
+  const percentage = Math.round((used / total) * 100)
+  return isNaN(percentage) ? 0 : Math.min(Math.max(percentage, 0), 100)
+}
+
+// 根据存储使用百分比返回颜色
+const getStorageColor = (percentage) => {
+  if (percentage >= 90) return '#f56c6c'
+  if (percentage >= 70) return '#e6a23c'
+  return '#67c23a'
 }
 
 const handleCreateBucket = async () => {
+  // 检查VIP权限
+  if (!userStore.hasRole('ROLE_VIP')) {
+    ElMessage.error('仅VIP用户可创建存储空间')
+    return
+  }
+
   if (!bucketFormRef.value) return
   await bucketFormRef.value.validate(async (valid) => {
     if (!valid) return
@@ -627,13 +1076,13 @@ const handleCreateBucket = async () => {
         bucketName: bucketForm.bucketName,
         description: bucketForm.description
       })
-      ElMessage.success('存储桶创建成功')
+      ElMessage.success('存储空间创建成功')
       showCreateBucket.value = false
       bucketForm.bucketName = ''
       bucketForm.description = ''
       await loadMyBuckets()
     } catch (error) {
-      console.error('创建存储桶失败:', error)
+      console.error('创建存储空间失败:', error)
       ElMessage.error(error.message || '创建失败')
     } finally {
       creatingBucket.value = false
@@ -654,11 +1103,11 @@ const handleUpdateBucket = async () => {
     await updateBucket(editBucketForm.id, {
       description: editBucketForm.description
     })
-    ElMessage.success('存储桶更新成功')
+    ElMessage.success('存储空间更新成功')
     showEditBucket.value = false
     await loadMyBuckets()
   } catch (error) {
-    console.error('更新存储桶失败:', error)
+    console.error('更新存储空间失败:', error)
     ElMessage.error(error.message || '更新失败')
   } finally {
     editingBucket.value = false
@@ -670,10 +1119,10 @@ const handleSetDefault = async (bucketId) => {
   try {
     await setDefaultBucket(bucketId)
     userStore.updateCurrentBucket(bucketId)
-    ElMessage.success('默认存储桶设置成功')
+    ElMessage.success('默认存储空间设置成功')
     await loadMyBuckets()
   } catch (error) {
-    console.error('设置默认存储桶失败:', error)
+    console.error('设置默认存储空间失败:', error)
     ElMessage.error(error.message || '设置失败')
   } finally {
     settingDefault.value = null
@@ -727,7 +1176,7 @@ const loadOAuthBindings = async () => {
   loadingOAuthBindings.value = true
   try {
     const result = await getOAuthBindings()
-    oauthBindings.value = Array.isArray(result) ? result : []
+    oauthBindings.value = Array.isArray(result?.bindings) ? result.bindings : []
   } catch (error) {
     console.error('加载OAuth绑定失败:', error)
   } finally {
@@ -878,6 +1327,39 @@ const getProviderDisplayName = (provider) => {
   gap: 12px;
 }
 
+/* 主题切换 */
+.theme-switch {
+  flex-direction: row !important;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(248, 250, 252, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.theme-switch-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-icon {
+  color: #14b8a6;
+}
+
+.theme-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.theme-desc {
+  font-size: 13px;
+  color: #6b7280;
+}
+
 .avatar-section {
   display: flex;
   align-items: flex-start;
@@ -920,10 +1402,102 @@ const getProviderDisplayName = (provider) => {
   flex-wrap: wrap;
 }
 
+/* 修改密码步骤 */
+.step-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(14, 165, 233, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #0ea5e9;
+  margin-bottom: 16px;
+}
+
+.step-info .el-icon {
+  font-size: 20px;
+  color: #0ea5e9;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.step-info-text {
+  flex: 1;
+}
+
+.step-info-text p {
+  margin: 0;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.step-info-text p:first-child {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.email-display {
+  font-weight: 600;
+  color: #0d9488;
+}
+
+.code-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.code-input {
+  flex: 1;
+}
+
+.send-code-btn {
+  white-space: nowrap;
+  min-width: 100px;
+}
+
 .hint-text {
   font-size: 12px;
   color: #9ca3af;
   margin-top: 4px;
+}
+
+/* 安全提示 */
+.security-tip {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 16px 0;
+}
+
+/* 存储信息 */
+.storage-info {
+  width: 100%;
+  max-width: 500px;
+}
+
+.storage-percentage {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.storage-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.storage-used {
+  color: #111827;
+  font-weight: 500;
+}
+
+.storage-divider {
+  color: #9ca3af;
+}
+
+.storage-total {
+  color: #6b7280;
 }
 
 .glass-input :deep(.el-input__wrapper) {
@@ -1236,5 +1810,12 @@ const getProviderDisplayName = (provider) => {
     gap: 16px;
     align-items: stretch;
   }
+}
+
+/* 对话框页脚 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 </style>

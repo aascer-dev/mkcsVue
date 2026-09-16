@@ -74,3 +74,247 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* 暗黑主题 */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+html.dark .main-layout {
+  background: #0f172a;
+}
+
+html.dark .header {
+  background: linear-gradient(135deg, #0e7490 0%, #0d9488 100%);
+}
+
+html.dark .sidebar {
+  background: #1e293b;
+  border-right-color: #334155;
+}
+
+html.dark .nav-item {
+  color: #cbd5e1;
+}
+
+html.dark .nav-item:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+html.dark .nav-item.active {
+  background: linear-gradient(135deg, #0e749020, #0d948820);
+  color: #5eead4;
+}
+
+html.dark .storage-info {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+html.dark .storage-title {
+  color: #f1f5f9;
+}
+
+html.dark .storage-text {
+  color: #94a3b8;
+}
+
+html.dark .main-content {
+  background: #0f172a;
+}
+
+html.dark .settings-page {
+  background: linear-gradient(160deg, #0a3a3a 0%, #0a2a3a 40%, #0a2040 100%);
+}
+
+html.dark .settings-header h1 {
+  color: #f1f5f9;
+}
+
+html.dark .settings-header p {
+  color: #94a3b8;
+}
+
+html.dark .settings-card {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+html.dark .card-title {
+  color: #f1f5f9;
+  border-bottom-color: rgba(94, 234, 212, 0.25);
+}
+
+html.dark .item-label {
+  color: #f1f5f9;
+}
+
+html.dark .theme-title {
+  color: #f1f5f9;
+}
+
+html.dark .theme-desc {
+  color: #94a3b8;
+}
+
+html.dark .theme-switch {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(51, 65, 85, 0.5);
+}
+
+html.dark .glass-input :deep(.el-input__wrapper) {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(51, 65, 85, 0.8);
+  color: #e2e8f0;
+}
+
+html.dark .glass-input :deep(.el-input__inner) {
+  color: #e2e8f0;
+}
+
+html.dark .bucket-item {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: #334155;
+}
+
+html.dark .bucket-item.is-default {
+  background: rgba(13, 148, 136, 0.15);
+  border-color: #0d9488;
+}
+
+html.dark .bucket-name {
+  color: #f1f5f9;
+}
+
+html.dark .bucket-meta {
+  color: #94a3b8;
+}
+
+html.dark .close-btn {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(51, 65, 85, 1);
+  color: #cbd5e1;
+}
+
+/* El-Dialog 暗黑主题 */
+html.dark .el-dialog {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+html.dark .el-dialog__title {
+  color: #f1f5f9;
+}
+
+html.dark .el-dialog__body {
+  color: #e2e8f0;
+}
+
+/* El-Form 暗黑主题 */
+html.dark .el-form-item__label {
+  color: #e2e8f0;
+}
+
+html.dark .el-input__wrapper {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(51, 65, 85, 0.8);
+  box-shadow: none;
+}
+
+html.dark .el-input__inner {
+  color: #e2e8f0;
+}
+
+html.dark .el-textarea__inner {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(51, 65, 85, 0.8);
+  color: #e2e8f0;
+}
+
+/* El-Message 暗黑主题 */
+html.dark .el-message {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .el-message__content {
+  color: #e2e8f0;
+}
+
+/* El-Table 暗黑主题 */
+html.dark .el-table {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+html.dark .el-table__header {
+  background: #0f172a;
+}
+
+html.dark .el-table th {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+html.dark .el-table tr {
+  background: #1e293b;
+}
+
+html.dark .el-table--striped .el-table__body tr.el-table__row--striped td {
+  background: #0f172a;
+}
+
+/* El-Dropdown 暗黑主题 */
+html.dark .el-dropdown-menu {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .el-dropdown-menu__item {
+  color: #e2e8f0;
+}
+
+html.dark .el-dropdown-menu__item:hover {
+  background: #334155;
+  color: #5eead4;
+}
+
+/* El-Empty 暗黑主题 */
+html.dark .el-empty__description p {
+  color: #94a3b8;
+}
+
+/* El-Tag 暗黑主题适配 */
+html.dark .el-tag {
+  border: 1px solid #334155;
+}
+
+html.dark .el-tag.el-tag--success {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+html.dark .el-tag.el-tag--info {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+html.dark .el-tag.el-tag--danger {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+html.dark .el-tag.el-tag--warning {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fcd34d;
+}

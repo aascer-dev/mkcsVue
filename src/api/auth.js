@@ -54,6 +54,23 @@ export const sendVerificationCode = (email, type = 'REGISTER') => {
   })
 }
 
+// 忘记密码：重置密码（兼容@RequestBody与表单/参数绑定）
+export const resetPassword = (data = {}) => {
+  const payload = {
+    email: data.email,
+    code: data.code,
+    password: data.password ?? data.newPassword,
+    verificationCodeType: data.verificationCodeType
+  }
+
+  return request({
+    url: '/api/auth/reset-password',
+    method: 'post',
+    data: payload,
+    params: payload
+  })
+}
+
 // 验证邮箱验证码
 export const verifyCode = (email, code, type = 'REGISTER') => {
   return request({
@@ -69,14 +86,6 @@ export const getVerificationCooldown = (email, type) => {
     url: '/api/auth/verification-code/cooldown',
     method: 'get',
     params: { email, type }
-  })
-}
-
-// 获取用户信息
-export const getUserInfo = () => {
-  return request({
-    url: '/api/auth/userinfo',
-    method: 'get'
   })
 }
 
@@ -224,7 +233,9 @@ export const uploadUserAvatar = (userId, file) => {
     url: `/api/users/${userId}/avatar`,
     method: 'post',
     data: formData,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
   })
 }
 
@@ -241,6 +252,20 @@ export const updateUserProfile = (data) => {
   return request({
     url: '/api/users/profile',
     method: 'put',
+    data
+  })
+}
+
+/**
+ * 修改密码
+ * @param {Object} data - 密码修改数据
+ * @param {string} data.oldPassword - 旧密码
+ * @param {string} data.newPassword - 新密码
+ */
+export const changePassword = (data) => {
+  return request({
+    url: '/api/auth/change-password',
+    method: 'post',
     data
   })
 }
