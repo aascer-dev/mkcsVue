@@ -11,6 +11,10 @@ import ChangeEmailVerification from '@/views/ChangeEmailVerification.vue'
 import OAuthCallback from '@/views/OAuthCallback.vue'
 import OAuth2EmailBinding from '@/views/OAuth2EmailBinding.vue'
 import OAuth2UsernameSelection from '@/views/OAuth2UsernameSelection.vue'
+import Favorites from '@/views/Favorites.vue'
+import RecycleBin from '@/views/RecycleBin.vue'
+import Shares from '@/views/Shares.vue'
+import SharedFile from '@/views/SharedFile.vue'
 
 const routes = [
   {
@@ -133,6 +137,53 @@ const routes = [
       }
     ],
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/favorites',
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'Favorites',
+        component: Favorites
+      }
+    ],
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/recycle-bin',
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'RecycleBin',
+        component: RecycleBin
+      }
+    ],
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/shares',
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'Shares',
+        component: Shares
+      }
+    ],
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/s/:shareCode',
+    component: MainLayout,
+    children: [
+      {
+        path: '',
+        name: 'SharedFile',
+        component: SharedFile
+      }
+    ]
   },
   {
     path: '/settings',

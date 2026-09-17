@@ -154,8 +154,9 @@ export const useUserStore = defineStore('user', {
     // 刷新Token
     async refreshAuthToken() {
       try {
-        const result = await refreshToken()
-        this.setToken(result.token, result.expiresIn)
+        const result = await refreshToken(this.refreshToken)
+        this.setToken(result.accessToken, result.expiresIn)
+        this.setRefreshToken(result.refreshToken)
         return result
       } catch (error) {
         console.error('刷新Token失败:', error)
@@ -197,7 +198,7 @@ export const useUserStore = defineStore('user', {
     async logout() {
       try {
         // 调用后端 API 删除服务器端 token
-        await logoutApi()
+        await logoutApi(this.refreshToken)
       } catch (error) {
         console.error('退出登录请求失败:', error)
       } finally {

@@ -1,4 +1,5 @@
 import request from '@/utils/request.js'
+import axios from 'axios'
 
 /**
  * 获取文件夹内容（按文件夹ID）
@@ -54,6 +55,14 @@ export const downloadFile = (fileId) => {
     url: `/api/files/download/${fileId}`,
     method: 'get',
     responseType: 'blob'
+  })
+}
+
+/** Obtain a short-lived URL for native browser preview and Range streaming. */
+export const createPreviewUrl = (fileId) => {
+  return request({
+    url: `/api/files/${fileId}/preview-url`,
+    method: 'post'
   })
 }
 
@@ -213,3 +222,53 @@ export const cancelChunkUpload = (uploadId) => {
     params: { uploadId }
   })
 }
+
+// ==================== MinIO Multipart 直传 ====================
+
+export const initMultipartUpload = data => request({ url: '/api/files/multipart/init', method: 'post', data })
+export const verifyMultipartSecondUpload = data => request({ url: '/api/files/multipart/second-upload/verify', method: 'post', data })
+export const getMultipartUploadStatus = uploadId => request({ url: `/api/files/multipart/${uploadId}/status`, method: 'get' })
+export const presignMultipartPart = data => request({ url: '/api/files/multipart/presign', method: 'post', data })
+export const completeMultipartUpload = data => request({ url: '/api/files/multipart/complete', method: 'post', data })
+export const cancelMultipartUpload = uploadId => request({ url: `/api/files/multipart/${uploadId}`, method: 'delete' })
+
+// ==================== 收藏夹 ====================
+
+export const getFavorites = () => request({ url: '/api/favorites', method: 'get' })
+export const favoriteFile = (fileId, notes = '') => request({
+  url: `/api/favorites/${fileId}`,
+  method: 'put',
+  data: { notes }
+})
+export const unfavoriteFile = fileId => request({ url: `/api/favorites/${fileId}`, method: 'delete' })
+
+// ==================== 回收站 ====================
+
+export const getRecycleBinFiles = () => request({ url: '/api/files/recycle-bin', method: 'get' })
+export const restoreRecycleBinFiles = fileIds => request({
+  url: '/api/files/recycle-bin/restore',
+  method: 'post',
+  data: { fileIds }
+})
+export const permanentlyDeleteRecycleBinFiles = fileIds => request({
+  url: '/api/files/recycle-bin',
+  method: 'delete',
+  data: { fileIds }
+})
+
+// ==================== 链接分享 ====================
+
+export const getMyShares = () => request({ url: '/api/shares', method: 'get' })
+export const createShare = data => request({ url: '/api/shares', method: 'post', data })
+export const revokeShare = shareId => request({ url: `/api/shares/${shareId}`, method: 'delete' })
+export const accessPublicShare = (shareCode, password = '') => request({
+  url: `/api/public/shares/${encodeURIComponent(shareCode)}/access`,
+  method: 'post',
+  data: { password }
+})
+/** Upload binary data directly to MinIO. The URL already carries its S3 signature. */
+export const uploadMultipartPart = (url, blob, contentType, onUploadProgress, signal) => axios.put(url, blob, {
+  headers: { 'Content-Type': contentType || 'application/octet-stream' },
+  onUploadProgress,
+  signal
+})

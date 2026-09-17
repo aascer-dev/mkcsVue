@@ -94,14 +94,13 @@ export function useAuthRefresh() {
   /**
    * 登录后初始化用户信息
    * 在登录成功设置token后，调用此方法获取完整的用户信息
-   * @param {string} token - 登录获取的token
-   * @param {number} expiresIn - token过期时间（秒）
+   * @param {Object} loginResponse - 登录接口返回的令牌与用户信息
    * @returns {Promise<Object|null>} 返回用户信息，失败返回null
    */
-  const initUserInfoAfterLogin = async (token, expiresIn = null) => {
+  const initUserInfoAfterLogin = async (loginResponse) => {
     try {
-      // 先设置token，这样后续请求才能携带token
-      userStore.setToken(token, expiresIn)
+      userStore.setToken(loginResponse.accessToken, loginResponse.expiresIn)
+      userStore.setRefreshToken(loginResponse.refreshToken)
       
       // 调用 /api/auth/userinfo 获取完整用户信息
       const userInfo = await userStore.refreshUserInfo()

@@ -87,7 +87,7 @@ async function initApp() {
 }
 ```
 
-#### 4. initUserInfoAfterLogin(token, expiresIn)
+#### 4. initUserInfoAfterLogin(loginResponse)
 
 登录后初始化用户信息，调用 `/api/auth/userinfo` 获取完整用户数据
 
@@ -100,8 +100,8 @@ const { initUserInfoAfterLogin } = useAuthRefresh()
 async function handleLogin() {
   const loginResponse = await loginApi(credentials)
   
-  // 使用token初始化完整用户信息
-  await initUserInfoAfterLogin(loginResponse.token, loginResponse.expiresIn)
+  // 保存 accessToken、refreshToken 后初始化完整用户信息
+  await initUserInfoAfterLogin(loginResponse)
   
   router.push('/home')
 }
@@ -122,8 +122,8 @@ const handleLogin = async (formData) => {
   try {
     const response = await login(formData)
     
-    // 自动设置token并调用 /api/auth/userinfo 获取完整信息
-    await initUserInfoAfterLogin(response.token, response.expiresIn)
+    // 自动保存令牌并调用 /api/auth/userinfo 获取完整信息
+    await initUserInfoAfterLogin(response)
     
     ElMessage.success('登录成功')
     router.push('/home')

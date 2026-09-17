@@ -27,23 +27,15 @@ request.interceptors.request.use(
     const userStore = useUserStore()
     const token = userStore.getToken
 
-    console.debug(`[Request] ${config.method?.toUpperCase()} ${config.url}`)
-    console.debug(`[Token] 存在: ${!!token}, 长度: ${token?.length || 0}`)
-
-    // 保存原有的headers
     const originalHeaders = config.headers || {}
 
     if (token) {
-      // 合并: 保留原有headers，添加token header
       config.headers = {
         ...originalHeaders,
-        mkcs: `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       }
-      console.debug(`[Request] mkcs header 已设置: Bearer ${token.substring(0, 20)}...`)
-      console.debug(`[Request] Content-Type: ${config.headers['Content-Type'] || 'auto'}`)
     } else {
       config.headers = originalHeaders
-      console.warn(`[Request] 缺少 token！`)
     }
 
     return config

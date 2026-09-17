@@ -70,7 +70,7 @@
           {{ formatDate(row.updatedAt || row.createdAt) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="164" fixed="right">
+      <el-table-column label="操作" width="246" fixed="right">
         <template #default="{ row }">
           <el-tooltip v-if="!row.isFolder" content="预览">
             <el-button circle size="small" :aria-label="`预览 ${row.filename}`" @click="previewFile(row)">
@@ -85,6 +85,22 @@
           <el-tooltip content="重命名">
             <el-button circle size="small" :aria-label="`重命名 ${row.filename}`" @click="renameFile(row)">
               <el-icon><Edit /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip :content="row.isFavorite ? '取消收藏' : '收藏'">
+            <el-button
+              circle
+              size="small"
+              :loading="favoriteChangingFileId === row.id"
+              :aria-label="`${row.isFavorite ? '取消收藏' : '收藏'} ${row.filename}`"
+              @click="toggleFavorite(row)"
+            >
+              <el-icon><StarFilled v-if="row.isFavorite" /><Star v-else /></el-icon>
+            </el-button>
+          </el-tooltip>
+          <el-tooltip content="创建分享链接">
+            <el-button circle size="small" :aria-label="`分享 ${row.filename}`" @click="openShareDialog(row)">
+              <el-icon><Share /></el-icon>
             </el-button>
           </el-tooltip>
           <el-tooltip content="删除">
@@ -137,6 +153,41 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="showShareDialog" title="创建分享链接" width="min(480px, calc(100vw - 32px))" @closed="resetShareDialog">
+      <template v-if="createdShareUrl">
+        <el-alert type="success" :closable="false" title="分享链接已创建" show-icon />
+        <el-input class="share-link" :model-value="createdShareUrl" readonly>
+          <template #append>
+            <el-tooltip content="复制分享链接"><el-button aria-label="复制分享链接" @click="copyShareLink"><el-icon><CopyDocument /></el-icon></el-button></el-tooltip>
+          </template>
+        </el-input>
+        <el-input class="share-link" :model-value="shareForm.password" readonly>
+          <template #prepend>提取码</template>
+          <template #append>
+            <el-tooltip content="复制提取码"><el-button aria-label="复制提取码" @click="copyShareCode"><el-icon><CopyDocument /></el-icon></el-button></el-tooltip>
+          </template>
+        </el-input>
+        <p class="share-code-hint">提取码区分大小写，请与链接一并发送给访问者。</p>
+      </template>
+      <el-form v-else :model="shareForm" label-width="84px" @submit.prevent="createShareLink">
+        <el-form-item label="文件">
+          <el-text truncated>{{ shareForm.filename }}</el-text>
+        </el-form-item>
+        <el-form-item label="提取码">
+          <el-input v-model="shareForm.password" maxlength="4" autocomplete="off" autocapitalize="off" placeholder="4位字母或数字" @input="sanitizeShareCode" />
+          <p class="share-code-hint">已随机生成，可自定义；区分大小写。</p>
+        </el-form-item>
+        <el-form-item label="有效期">
+          <el-date-picker v-model="shareForm.expiresAt" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" :disabled-date="disablePastDate" style="width: 100%" />
+          <p class="share-code-hint">默认 1 天后过期。</p>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showShareDialog = false">{{ createdShareUrl ? '关闭' : '取消' }}</el-button>
+        <el-button v-if="!createdShareUrl" type="primary" :loading="creatingShare" @click="createShareLink">创建链接</el-button>
+      </template>
+    </el-dialog>
+
     <FilePreview v-if="activePreviewFile" v-model="showPreview" :file-id="activePreviewFile.id" :file="activePreviewFile" @closed="activePreviewFile = null" />
   </section>
 </template>
@@ -145,12 +196,13 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Document, Download, Edit, Folder, FolderAdd, Refresh, Upload, UploadFilled, View } from '@element-plus/icons-vue'
+import { CopyDocument, Delete, Document, Download, Edit, Folder, FolderAdd, Refresh, Share, Star, StarFilled, Upload, UploadFilled, View } from '@element-plus/icons-vue'
 import { FilePreview } from '@/components/FilePreview'
-import { batchDeleteFiles, createFolder, deleteFile as deleteFileApi, downloadFile as downloadFileApi, getFolderContents, renameFile as renameFileApi, searchFiles, uploadFile } from '@/api/file.js'
+import { batchDeleteFiles, completeMultipartUpload, createFolder, createShare, deleteFile as deleteFileApi, downloadFile as downloadFileApi, favoriteFile as favoriteFileApi, getFolderContents, getMultipartUploadStatus, initMultipartUpload, presignMultipartPart, renameFile as renameFileApi, searchFiles, unfavoriteFile as unfavoriteFileApi, uploadFile, uploadMultipartPart, verifyMultipartSecondUpload } from '@/api/file.js'
 import { useFileStore } from '@/stores/file.js'
 import { useUserStore } from '@/stores/user.js'
 import { formatFileSize } from '@/utils/fileUtils.js'
+import { hashBlobMd5, hashFileSha256 } from '@/utils/sha256.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -163,11 +215,18 @@ const showUploadDialog = ref(false)
 const showCreateFolderDialog = ref(false)
 const showPreview = ref(false)
 const activePreviewFile = ref(null)
+const showShareDialog = ref(false)
+const creatingShare = ref(false)
+const createdShareUrl = ref('')
+const favoriteChangingFileId = ref(null)
 const uploading = ref(false)
 const uploadAbortController = ref(null)
 const uploadFileList = ref([])
 const uploadProgress = reactive({ name: '', value: 0 })
 const folderForm = reactive({ name: '' })
+const shareForm = reactive({ fileId: null, filename: '', password: '', expiresAt: null })
+const MULTIPART_THRESHOLD = 16 * 1024 * 1024
+const MULTIPART_CONCURRENCY = 3
 
 const searchKeyword = computed(() => String(route.query.keyword || '').trim())
 const isSearchMode = computed(() => Boolean(searchKeyword.value))
@@ -222,6 +281,59 @@ const appendLocation = formData => {
   if (currentBucketId.value) formData.append('bucketId', String(currentBucketId.value))
 }
 
+const multipartLocation = () => ({
+  parentId: currentFolderId.value > 0 ? currentFolderId.value : null,
+  bucketId: currentBucketId.value || null
+})
+
+const uploadLargeFile = async file => {
+  uploadProgress.name = `${file.name}（正在计算 SHA-256）`
+  uploadProgress.value = 0
+  const fileHash = await hashFileSha256(file, value => { uploadProgress.value = Math.round(value * 10) }, uploadAbortController.value.signal)
+  const task = await initMultipartUpload({ filename: file.name, fileSize: file.size, fileHash, mimeType: file.type || 'application/octet-stream', ...multipartLocation() })
+  if (task.secondUploadChallenge) {
+    uploadProgress.name = `${file.name}（正在验证文件内容）`
+    const challenge = file.slice(task.challengeOffset, task.challengeOffset + task.challengeLength)
+    if (challenge.size !== task.challengeLength) throw new Error('秒传校验范围无效，请重新上传')
+    const challengeHash = await hashBlobMd5(challenge)
+    await verifyMultipartSecondUpload({ uploadId: task.uploadId, challengeHash })
+    uploadProgress.value = 100
+    return
+  }
+  if (task.instantUpload) return
+
+  uploadProgress.name = file.name
+  const status = await getMultipartUploadStatus(task.uploadId)
+  const parts = new Map(status.uploadedParts.map(part => [part.partNumber, part.etag]))
+  const loaded = new Map(status.uploadedParts.map(part => [part.partNumber, Math.min(part.size || 0, task.partSize)]))
+  const pending = []
+  for (let partNumber = 1; partNumber <= task.totalParts; partNumber++) if (!parts.has(partNumber)) pending.push(partNumber)
+  const updateProgress = () => {
+    const uploaded = [...loaded.values()].reduce((sum, value) => sum + value, 0)
+    uploadProgress.value = Math.min(99, 10 + Math.round((uploaded / file.size) * 90))
+  }
+  const worker = async () => {
+    while (pending.length) {
+      const partNumber = pending.shift()
+      const offset = (partNumber - 1) * task.partSize
+      const blob = file.slice(offset, Math.min(offset + task.partSize, file.size))
+      const { url } = await presignMultipartPart({ uploadId: task.uploadId, partNumber })
+      const response = await uploadMultipartPart(url, blob, file.type, event => {
+        loaded.set(partNumber, event.loaded)
+        updateProgress()
+      }, uploadAbortController.value.signal)
+      const etag = response.headers.etag
+      if (!etag) throw new Error('MinIO 未在响应中返回 ETag；请检查 MinIO CORS 的 ExposeHeaders 配置')
+      loaded.set(partNumber, blob.size)
+      parts.set(partNumber, etag)
+      updateProgress()
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(MULTIPART_CONCURRENCY, pending.length) }, worker))
+  await completeMultipartUpload({ uploadId: task.uploadId, parts: [...parts.entries()].map(([partNumber, etag]) => ({ partNumber, etag })) })
+  uploadProgress.value = 100
+}
+
 const handleUpload = async () => {
   if (!uploadFileList.value.length) {
     ElMessage.warning('请选择要上传的文件')
@@ -232,14 +344,18 @@ const handleUpload = async () => {
   try {
     const queuedFiles = [...uploadFileList.value]
     for (const uploadItem of queuedFiles) {
-      const formData = new FormData()
-      formData.append('file', uploadItem.raw)
-      appendLocation(formData)
       uploadProgress.name = uploadItem.name
       uploadProgress.value = 0
-      await uploadFile(formData, event => {
-        if (event.total) uploadProgress.value = Math.round((event.loaded / event.total) * 100)
-      }, uploadAbortController.value.signal)
+      if (uploadItem.raw.size >= MULTIPART_THRESHOLD) {
+        await uploadLargeFile(uploadItem.raw)
+      } else {
+        const formData = new FormData()
+        formData.append('file', uploadItem.raw)
+        appendLocation(formData)
+        await uploadFile(formData, event => {
+          if (event.total) uploadProgress.value = Math.round((event.loaded / event.total) * 100)
+        }, uploadAbortController.value.signal)
+      }
       uploadFileList.value = uploadFileList.value.filter(file => file.uid !== uploadItem.uid)
     }
     ElMessage.success('文件上传完成')
@@ -286,6 +402,106 @@ const handleCreateFolder = async () => {
 const previewFile = file => {
   activePreviewFile.value = file
   showPreview.value = true
+}
+
+const toggleFavorite = async file => {
+  if (favoriteChangingFileId.value !== null) return
+  const isFavorite = Boolean(file.isFavorite)
+  favoriteChangingFileId.value = file.id
+  try {
+    if (isFavorite) {
+      await unfavoriteFileApi(file.id)
+      file.isFavorite = false
+      ElMessage.success('已取消收藏')
+    } else {
+      await favoriteFileApi(file.id)
+      file.isFavorite = true
+      ElMessage.success('已加入收藏夹')
+    }
+  } catch (error) {
+    console.error(isFavorite ? '取消收藏失败:' : '收藏文件失败:', error)
+  } finally {
+    favoriteChangingFileId.value = null
+  }
+}
+
+const openShareDialog = file => {
+  if (file.isFolder) {
+    ElMessage.info('文件夹公开下载暂不支持，请选择单个文件')
+    return
+  }
+  shareForm.fileId = file.id
+  shareForm.filename = file.filename
+  shareForm.password = generateShareCode()
+  shareForm.expiresAt = defaultShareExpiry()
+  showShareDialog.value = true
+}
+
+const resetShareDialog = () => {
+  Object.assign(shareForm, { fileId: null, filename: '', password: '', expiresAt: null })
+  createdShareUrl.value = ''
+  creatingShare.value = false
+}
+
+const createShareLink = async () => {
+  if (!shareForm.fileId) return
+  if (!/^[A-Za-z0-9]{4}$/.test(shareForm.password)) {
+    ElMessage.warning('提取码必须为 4 位大小写字母或数字')
+    return
+  }
+  creatingShare.value = true
+  try {
+    const share = await createShare({ fileId: shareForm.fileId, password: shareForm.password, expiresAt: shareForm.expiresAt })
+    createdShareUrl.value = `${window.location.origin}/s/${share.shareCode}`
+  } catch (error) {
+    console.error('创建分享链接失败:', error)
+  } finally {
+    creatingShare.value = false
+  }
+}
+
+const sanitizeShareCode = value => {
+  shareForm.password = String(value).replace(/[^A-Za-z0-9]/g, '').slice(0, 4)
+}
+
+const generateShareCode = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const values = new Uint32Array(4)
+  crypto.getRandomValues(values)
+  return Array.from(values, value => alphabet[value % alphabet.length]).join('')
+}
+
+const formatDateTimeValue = date => {
+  const pad = value => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+const defaultShareExpiry = () => {
+  const expiresAt = new Date()
+  expiresAt.setDate(expiresAt.getDate() + 1)
+  return formatDateTimeValue(expiresAt)
+}
+
+const disablePastDate = date => date.getTime() < Date.now() - 24 * 60 * 60 * 1000
+
+const copyShareLink = async () => {
+  try {
+    await navigator.clipboard.writeText(createdShareUrl.value)
+    ElMessage.success('分享链接已复制')
+  } catch (error) {
+    console.error('复制分享链接失败:', error)
+    ElMessage.error('无法复制分享链接')
+  }
+}
+
+const copyShareCode = async () => {
+  try {
+    await navigator.clipboard.writeText(shareForm.password)
+    ElMessage.success('提取码已复制')
+  } catch (error) {
+    console.error('复制提取码失败:', error)
+    ElMessage.error('无法复制提取码')
+  }
 }
 
 const downloadFile = async file => {
@@ -368,5 +584,7 @@ onMounted(() => {
 .file-row__name:hover { color: var(--el-color-primary); }
 .file-row__icon { color: var(--el-color-primary); flex: 0 0 auto; }
 .upload-progress { display: grid; gap: 8px; margin-top: 16px; font-size: 13px; color: var(--el-text-color-regular); }
+.share-link { margin-top: 16px; }
+.share-code-hint { width: 100%; margin: 6px 0 0; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.5; }
 @media (max-width: 720px) { .file-manager__header { align-items: flex-start; flex-direction: column; } .file-manager__toolbar { justify-content: flex-start; } }
 </style>

@@ -31,6 +31,15 @@ const AUDIO_MIMES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio
 const PDF_EXTENSIONS = ['pdf']
 const PDF_MIMES = ['application/pdf']
 
+// getFileType intentionally recognizes more formats for icons. This narrower
+// list reflects what browsers can display without server-side transcoding.
+const BROWSER_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico']
+const BROWSER_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/x-icon']
+const BROWSER_VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogg', 'm4v']
+const BROWSER_VIDEO_MIMES = ['video/mp4', 'video/webm', 'video/ogg']
+const BROWSER_AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'aac', 'm4a']
+const BROWSER_AUDIO_MIMES = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/x-m4a']
+
 // 文档格式
 const DOCUMENT_EXTENSIONS = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'ods', 'odp']
 const DOCUMENT_MIMES = [
@@ -109,14 +118,14 @@ export const getFileType = (fileName, mimeType = '') => {
  */
 export const isPreviewSupported = (fileName, mimeType = '') => {
   const fileType = getFileType(fileName, mimeType)
-  return [
-    FILE_TYPES.IMAGE,
-    FILE_TYPES.VIDEO,
-    FILE_TYPES.AUDIO,
-    FILE_TYPES.PDF,
-    FILE_TYPES.CODE,
-    FILE_TYPES.TEXT
-  ].includes(fileType)
+  const ext = getFileExtension(fileName)
+  const mime = mimeType.toLowerCase()
+  const matches = (extensions, mimes) => extensions.includes(ext) || mimes.some(value => mime.includes(value))
+
+  if (fileType === FILE_TYPES.IMAGE) return matches(BROWSER_IMAGE_EXTENSIONS, BROWSER_IMAGE_MIMES)
+  if (fileType === FILE_TYPES.VIDEO) return matches(BROWSER_VIDEO_EXTENSIONS, BROWSER_VIDEO_MIMES)
+  if (fileType === FILE_TYPES.AUDIO) return matches(BROWSER_AUDIO_EXTENSIONS, BROWSER_AUDIO_MIMES)
+  return [FILE_TYPES.PDF, FILE_TYPES.CODE, FILE_TYPES.TEXT].includes(fileType)
 }
 
 /**
@@ -237,15 +246,20 @@ export const getCodeLanguage = (fileName) => {
 export const getPreviewConfig = (fileInfo) => {
   const { fileName, mimeType, fileSize } = fileInfo
   const fileType = getFileType(fileName, mimeType)
+  const supported = isPreviewSupported(fileName, mimeType)
+  const isTextPreview = [FILE_TYPES.CODE, FILE_TYPES.TEXT].includes(fileType)
+  const maxTextPreviewSize = 10 * 1024 * 1024
   
   return {
     type: fileType,
-    supported: isPreviewSupported(fileName, mimeType),
+    supported,
     language: fileType === FILE_TYPES.CODE ? getCodeLanguage(fileName) : null,
     icon: getFileIconClass(fileName, mimeType),
     formattedSize: formatFileSize(fileSize),
-    maxPreviewSize: 10 * 1024 * 1024, // 10MB
-    canPreview: fileSize < 10 * 1024 * 1024 && isPreviewSupported(fileName, mimeType)
+    maxPreviewSize: isTextPreview ? maxTextPreviewSize : null,
+    // Text/code are read into memory; audio, video, images and PDFs use the
+    // Range-capable preview endpoint and are not subject to the Blob limit.
+    canPreview: supported && (!isTextPreview || fileSize <= maxTextPreviewSize)
   }
 }
 

@@ -29,7 +29,7 @@
     </div>
     <div v-else-if="!fileConfig.canPreview" class="preview-state">
       <el-icon size="36"><Document /></el-icon>
-      <p>此文件类型暂不支持在线预览</p>
+      <p>{{ unsupportedPreviewMessage }}</p>
       <el-button type="primary" @click="handleDownload">下载文件</el-button>
     </div>
     <div v-else class="preview-content">
@@ -42,7 +42,7 @@
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { Document, Download, FullScreen, Loading, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { downloadFile } from '@/api/file.js'
+import { createPreviewUrl, downloadFile } from '@/api/file.js'
 import { FILE_TYPES, getPreviewConfig } from '@/utils/fileUtils.js'
 import AudioPreview from './AudioPreview.vue'
 import CodePreview from './CodePreview.vue'
@@ -67,13 +67,20 @@ const fileContent = ref('')
 const isFullscreen = ref(false)
 const previewComponent = shallowRef(null)
 const previewBlob = ref(null)
+const isBlobPreviewUrl = ref(false)
 
 const fileInfo = computed(() => ({
   fileName: props.file.filename || '未命名文件',
   fileSize: Number(props.file.size) || 0,
-  mimeType: previewBlob.value?.type || ''
+  mimeType: previewBlob.value?.type || props.file.mimeType || ''
 }))
 const fileConfig = computed(() => getPreviewConfig(fileInfo.value))
+const unsupportedPreviewMessage = computed(() => {
+  if (fileConfig.value.supported && fileConfig.value.maxPreviewSize) {
+    return '文本或代码文件超过 10 MB，请下载后查看'
+  }
+  return '此文件类型或浏览器编解码暂不支持在线预览'
+})
 const componentMap = {
   [FILE_TYPES.IMAGE]: ImagePreview,
   [FILE_TYPES.VIDEO]: VideoPreview,
@@ -84,8 +91,9 @@ const componentMap = {
 }
 
 const revokePreviewUrl = () => {
-  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  if (previewUrl.value && isBlobPreviewUrl.value) URL.revokeObjectURL(previewUrl.value)
   previewUrl.value = ''
+  isBlobPreviewUrl.value = false
 }
 
 const loadPreview = async () => {
@@ -93,13 +101,19 @@ const loadPreview = async () => {
   error.value = ''
   revokePreviewUrl()
   try {
-    const blob = await downloadFile(props.fileId)
-    previewBlob.value = blob
-    const config = getPreviewConfig({ ...fileInfo.value, mimeType: blob.type })
-    if (config.canPreview) {
-      previewComponent.value = componentMap[config.type]
+    const config = fileConfig.value
+    if (!config.canPreview) return
+
+    previewComponent.value = componentMap[config.type]
+    if (config.type === FILE_TYPES.TEXT || config.type === FILE_TYPES.CODE) {
+      const blob = await downloadFile(props.fileId)
+      previewBlob.value = blob
       previewUrl.value = URL.createObjectURL(blob)
-      if (config.type === FILE_TYPES.TEXT || config.type === FILE_TYPES.CODE) fileContent.value = await blob.text()
+      isBlobPreviewUrl.value = true
+      fileContent.value = await blob.text()
+    } else {
+      const preview = await createPreviewUrl(props.fileId)
+      previewUrl.value = preview.previewUrl
     }
   } catch (requestError) {
     console.error('加载文件预览失败:', requestError)

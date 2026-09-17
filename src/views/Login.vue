@@ -249,7 +249,6 @@ import {
   CircleClose,
   Loading
 } from '@element-plus/icons-vue'
-import { useUserStore } from '@/stores/user.js'
 import { useAuthRefresh } from '@/composables/useAuthRefresh.js'
 import { 
   login, 
@@ -264,8 +263,6 @@ import OAuthLogin from '@/components/OAuthLogin.vue'
 
 const router = useRouter()
 const route = useRoute()
-const userStore = useUserStore()
-
 const loginFormRef = ref()
 const registerFormRef = ref()
 const oauthRef = ref()
@@ -484,16 +481,9 @@ const handleVerifyAndRegister = async () => {
     const data = await register(registerData)
     
     // 注册成功后自动登录
-    if (data.token) {
-      userStore.setToken(data.token)
-      userStore.setUserInfo({
-        id: data.id,
-        username: data.username,
-        nickname: data.nickname,
-        email: data.email,
-        avatarUrl: data.avatarUrl,
-        currentBucketId: data.currentBucketId
-      })
+    if (data.accessToken && data.refreshToken) {
+      const { initUserInfoAfterLogin } = useAuthRefresh()
+      await initUserInfoAfterLogin(data)
       ElMessage.success('注册成功，已自动登录')
       router.push('/home')
     } else {
@@ -564,7 +554,7 @@ const handleLogin = async () => {
         
         // 设置token并获取完整用户信息
         const { initUserInfoAfterLogin } = useAuthRefresh()
-        await initUserInfoAfterLogin(data.token, data.expiresIn)
+        await initUserInfoAfterLogin(data)
         
         ElMessage.success('登录成功')
         

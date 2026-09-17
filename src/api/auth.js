@@ -98,18 +98,20 @@ export const checkLoginStatus = () => {
 }
 
 // 刷新Token
-export const refreshToken = () => {
+export const refreshToken = (refreshToken) => {
   return request({
     url: '/api/auth/refresh',
-    method: 'post'
+    method: 'post',
+    data: { refreshToken }
   })
 }
 
 // 退出登录
-export const logout = () => {
+export const logout = (refreshToken) => {
   return request({
     url: '/api/auth/logout',
-    method: 'post'
+    method: 'post',
+    data: { refreshToken }
   })
 }
 
@@ -290,4 +292,3 @@ export const unbindOAuthProvider = (provider) => {
     method: 'delete'
   })
 }
-

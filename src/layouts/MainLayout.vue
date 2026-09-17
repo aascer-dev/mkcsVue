@@ -75,18 +75,18 @@
             <el-icon><Folder /></el-icon>
             <span>我的文件</span>
           </router-link>
-          <div class="nav-item">
+          <router-link to="/shares" class="nav-item" :class="{ active: $route.path === '/shares' }">
             <el-icon><Share /></el-icon>
-            <span>共享文件</span>
-          </div>
-          <div class="nav-item">
+            <span>我的分享</span>
+          </router-link>
+          <router-link to="/favorites" class="nav-item" :class="{ active: $route.path === '/favorites' }">
             <el-icon><StarFilled /></el-icon>
             <span>收藏夹</span>
-          </div>
-          <div class="nav-item">
+          </router-link>
+          <router-link to="/recycle-bin" class="nav-item" :class="{ active: $route.path === '/recycle-bin' }">
             <el-icon><Delete /></el-icon>
             <span>回收站</span>
-          </div>
+          </router-link>
         </nav>
 
         <div class="storage-info">
@@ -146,7 +146,7 @@ const totalStorage = computed(() => {
 })
 
 const showSidebar = computed(() => {
-  return route.path !== '/login' && route.path !== '/register' && route.path !== '/forgot-password' && route.path !== '/landing' && route.path !== '/settings'
+  return route.path !== '/login' && route.path !== '/register' && route.path !== '/forgot-password' && route.path !== '/landing' && route.path !== '/settings' && !route.path.startsWith('/s/')
 })
 
 const showSearch = computed(() => {
@@ -168,6 +168,9 @@ const breadcrumbMap = {
   '/landing': [{ name: '首页', path: '/landing' }],
   '/home': [{ name: '首页', path: '/home' }],
   '/files': [{ name: '首页', path: '/home' }, { name: '我的文件', path: '/files' }],
+  '/shares': [{ name: '首页', path: '/home' }, { name: '我的分享', path: '/shares' }],
+  '/favorites': [{ name: '首页', path: '/home' }, { name: '收藏夹', path: '/favorites' }],
+  '/recycle-bin': [{ name: '首页', path: '/home' }, { name: '回收站', path: '/recycle-bin' }],
   '/settings': [{ name: '首页', path: '/home' }, { name: '设置', path: '/settings' }],
   '/login': [{ name: '登录', path: null }],
   '/register': [{ name: '注册', path: null }],
@@ -179,7 +182,7 @@ const breadcrumbs = computed(() => {
 })
 
 const showBreadcrumb = computed(() => {
-  return route.path !== '/landing' && route.path !== '/login' && route.path !== '/register' && route.path !== '/forgot-password' && route.path !== '/home' && route.path !== '/files'
+  return route.path !== '/landing' && route.path !== '/login' && route.path !== '/register' && route.path !== '/forgot-password' && route.path !== '/home' && route.path !== '/files' && !route.path.startsWith('/s/')
 })
 
 // 加载默认存储桶信息
