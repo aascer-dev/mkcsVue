@@ -125,31 +125,74 @@ jobs:
       - name: Pull and update frontend
         run: |
           set -euo pipefail
+          COMPOSE=(docker compose --env-file "$DEPLOY_ROOT/.env" -f "$DEPLOY_ROOT/docker-compose.yml")
           FRONTEND_IMAGE="$FRONTEND_IMAGE" IMAGE_TAG="$IMAGE_TAG" \
             docker compose --env-file "$DEPLOY_ROOT/.env" \
               -f "$DEPLOY_ROOT/docker-compose.yml" pull frontend
           FRONTEND_IMAGE="$FRONTEND_IMAGE" IMAGE_TAG="$IMAGE_TAG" \
             docker compose --env-file "$DEPLOY_ROOT/.env" \
               -f "$DEPLOY_ROOT/docker-compose.yml" up -d --no-deps frontend
-          docker compose --env-file "$DEPLOY_ROOT/.env" \
-            -f "$DEPLOY_ROOT/docker-compose.yml" restart nginx
+          if "${COMPOSE[@]}" config --services | grep -qx nginx; then
+            "${COMPOSE[@]}" restart nginx
+          else
+            echo "::warning::Compose has no nginx service; checking the existing host ingress instead."
+          fi
 
       - name: Verify containers and endpoints
         run: |
           set -euo pipefail
           COMPOSE=(docker compose --env-file "$DEPLOY_ROOT/.env" -f "$DEPLOY_ROOT/docker-compose.yml")
-          frontend_id="$("${COMPOSE[@]}" ps -q frontend)"
-          nginx_id="$("${COMPOSE[@]}" ps -q nginx)"
-          test -n "$frontend_id" && test -n "$nginx_id"
-          test "$(docker inspect -f '{{.State.Status}}' "$frontend_id")" = running
-          test "$(docker inspect -f '{{.State.Status}}' "$nginx_id")" = running
-          "${COMPOSE[@]}" ps
+          echo 'Compose services:'
+          "${COMPOSE[@]}" config --services
+          echo 'Compose status:'
+          "${COMPOSE[@]}" ps -a
 
-          nginx_port="$("${COMPOSE[@]}" port nginx 80 | awk -F: 'NF { print $NF; exit }')"
-          test -n "$nginx_port"
+          frontend_id="$("${COMPOSE[@]}" ps -aq frontend)"
+          if [ -z "$frontend_id" ]; then
+            echo 'Frontend container was not found in Compose.' >&2
+            exit 1
+          fi
+          frontend_status="$(docker inspect -f '{{.State.Status}}' "$frontend_id")"
+          if [ "$frontend_status" != running ]; then
+            echo "Frontend container status: $frontend_status" >&2
+            "${COMPOSE[@]}" logs --no-color --tail=100 frontend >&2 || true
+            exit 1
+          fi
+
+          if "${COMPOSE[@]}" config --services | grep -qx nginx; then
+            nginx_id="$("${COMPOSE[@]}" ps -aq nginx)"
+            if [ -z "$nginx_id" ]; then
+              echo 'Compose nginx service has no container.' >&2
+              exit 1
+            fi
+            nginx_status="$(docker inspect -f '{{.State.Status}}' "$nginx_id")"
+            if [ "$nginx_status" != running ]; then
+              echo "Nginx container status: $nginx_status" >&2
+              "${COMPOSE[@]}" logs --no-color --tail=100 nginx >&2 || true
+              exit 1
+            fi
+            nginx_port="$("${COMPOSE[@]}" port nginx 80 | awk -F: 'NF { print $NF; exit }')"
+          else
+            nginx_port="$(awk -F= '$1 == "HTTP_PORT" { print $2 }' "$DEPLOY_ROOT/.env" | tail -n 1)"
+            nginx_port="${nginx_port:-80}"
+            if ! [[ "$nginx_port" =~ ^[0-9]+$ ]]; then
+              echo "Invalid HTTP_PORT: $nginx_port" >&2
+              exit 1
+            fi
+            echo "Using external ingress on host port $nginx_port."
+          fi
+
+          if [ -z "$nginx_port" ]; then
+            echo 'Unable to determine the HTTP port.' >&2
+            exit 1
+          fi
           base_url="http://127.0.0.1:${nginx_port}"
-          curl --fail --silent --show-error --retry 10 --retry-delay 2 --retry-connrefused \
-            "$base_url/" > /dev/null
+          home_status="$(curl --silent --show-error --retry 10 --retry-delay 2 --retry-connrefused \
+            --output /dev/null --write-out '%{http_code}' "$base_url/")"
+          case "$home_status" in
+            2??|3??) ;;
+            *) echo "Unexpected homepage status: $home_status" >&2; exit 1 ;;
+          esac
           api_status="$(curl --silent --show-error --retry 10 --retry-delay 2 --retry-connrefused \
             --output /dev/null --write-out '%{http_code}' "$base_url/api/")"
           case "$api_status" in
