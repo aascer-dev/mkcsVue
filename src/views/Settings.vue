@@ -407,7 +407,7 @@
       </div>
 
       <!-- OAuth 账号关联卡片 -->
-      <div class="settings-card">
+      <div v-if="oauthEnabled" class="settings-card">
         <div class="card-title">
           <el-icon><Link /></el-icon>
           <span>账号关联</span>
@@ -719,6 +719,7 @@ const bucketRules = {
 const loadingOAuthBindings = ref(true)
 const unbindingProvider = ref('')
 const oauthBindings = ref([])
+const oauthEnabled = import.meta.env.VITE_ENABLE_OAUTH === 'true'
 
 // 计算属性：分组存储桶
 const myOwnBuckets = computed(() => {
@@ -753,7 +754,11 @@ watch(
 onMounted(() => {
   initFormData()
   loadMyBuckets()
-  loadOAuthBindings()
+  if (oauthEnabled) {
+    loadOAuthBindings()
+  } else {
+    loadingOAuthBindings.value = false
+  }
 })
 
 // ====== 头像 ======

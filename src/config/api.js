@@ -1,16 +1,14 @@
 // API配置
 export const API_CONFIG = {
   // 基础URL配置
-  BASE_URL:
-    process.env.NODE_ENV === "production"
-      ? "https://your-api-domain.com"
-      : "http://localhost:8080",
+  // Keep the default relative so the production Nginx reverse proxy owns the API origin.
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || "",
 
   // API前缀
   API_PREFIX: "/api",
 
   // 超时时间
-  TIMEOUT: 10000,
+  TIMEOUT: Number(import.meta.env.VITE_API_TIMEOUT || 10000),
 
   // 上传文件大小限制 (100MB)
   MAX_UPLOAD_SIZE: 100 * 1024 * 1024,

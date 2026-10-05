@@ -64,7 +64,7 @@
         </el-button>
         
         <!-- OAuth登录 -->
-        <OAuthLogin ref="oauthRef" />
+        <OAuthLogin v-if="oauthEnabled" ref="oauthRef" />
       </el-form>
 
       <!-- 注册表单 -->
@@ -266,6 +266,7 @@ const route = useRoute()
 const loginFormRef = ref()
 const registerFormRef = ref()
 const oauthRef = ref()
+const oauthEnabled = import.meta.env.VITE_ENABLE_OAUTH === 'true'
 const loading = ref(false)
 const registerLoading = ref(false)
 const rememberMe = ref(false)
