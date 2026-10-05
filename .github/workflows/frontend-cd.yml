@@ -1,0 +1,158 @@
+name: Frontend CD
+
+on:
+  workflow_run:
+    workflows: [Frontend CI]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/mkcs-frontend
+
+jobs:
+  image:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      IMAGE_TAG: sha-${{ github.event.workflow_run.head_sha }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare isolated image context
+        run: |
+          set -euo pipefail
+          rm -rf .frontend-image-context
+          mkdir -p .frontend-image-context/dist
+          cp deploy/Dockerfile.runtime .frontend-image-context/Dockerfile
+          cp deploy/nginx.conf .frontend-image-context/nginx.conf
+
+      - name: Download CI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist-${{ github.event.workflow_run.head_sha }}
+          path: .frontend-image-context/dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify static bundle
+        run: test -f .frontend-image-context/dist/index.html
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .frontend-image-context
+          file: .frontend-image-context/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=frontend-image
+          cache-to: type=gha,mode=max,scope=frontend-image
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.HEAD_SHA }}
+
+  deploy:
+    if: vars.DEPLOY_ENABLED == 'true' && needs.image.result == 'success'
+    needs: image
+    permissions:
+      packages: read
+    concurrency:
+      group: frontend-production
+      cancel-in-progress: false
+    runs-on: [self-hosted, debian13(vmware)]
+    timeout-minutes: 15
+    env:
+      DEPLOY_ROOT: ${{ vars.DEPLOY_ROOT || '/opt/mkcs' }}
+      FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/mkcs-frontend
+      IMAGE_TAG: sha-${{ github.event.workflow_run.head_sha }}
+
+    steps:
+      - name: Validate deployment files
+        run: |
+          set -euo pipefail
+          test -f "$DEPLOY_ROOT/.env" || {
+            echo "Missing $DEPLOY_ROOT/.env" >&2
+            exit 1
+          }
+          test -f "$DEPLOY_ROOT/docker-compose.yml" || {
+            echo "Missing $DEPLOY_ROOT/docker-compose.yml" >&2
+            exit 1
+          }
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Validate Compose configuration
+        run: |
+          set -euo pipefail
+          FRONTEND_IMAGE="$FRONTEND_IMAGE" IMAGE_TAG="$IMAGE_TAG" \
+            docker compose --env-file "$DEPLOY_ROOT/.env" \
+              -f "$DEPLOY_ROOT/docker-compose.yml" config --quiet
+
+      - name: Pull and update frontend
+        run: |
+          set -euo pipefail
+          FRONTEND_IMAGE="$FRONTEND_IMAGE" IMAGE_TAG="$IMAGE_TAG" \
+            docker compose --env-file "$DEPLOY_ROOT/.env" \
+              -f "$DEPLOY_ROOT/docker-compose.yml" pull frontend
+          FRONTEND_IMAGE="$FRONTEND_IMAGE" IMAGE_TAG="$IMAGE_TAG" \
+            docker compose --env-file "$DEPLOY_ROOT/.env" \
+              -f "$DEPLOY_ROOT/docker-compose.yml" up -d --no-deps frontend
+          docker compose --env-file "$DEPLOY_ROOT/.env" \
+            -f "$DEPLOY_ROOT/docker-compose.yml" restart nginx
+
+      - name: Verify containers and endpoints
+        run: |
+          set -euo pipefail
+          COMPOSE=(docker compose --env-file "$DEPLOY_ROOT/.env" -f "$DEPLOY_ROOT/docker-compose.yml")
+          frontend_id="$("${COMPOSE[@]}" ps -q frontend)"
+          nginx_id="$("${COMPOSE[@]}" ps -q nginx)"
+          test -n "$frontend_id" && test -n "$nginx_id"
+          test "$(docker inspect -f '{{.State.Status}}' "$frontend_id")" = running
+          test "$(docker inspect -f '{{.State.Status}}' "$nginx_id")" = running
+          "${COMPOSE[@]}" ps
+
+          nginx_port="$("${COMPOSE[@]}" port nginx 80 | awk -F: 'NF { print $NF; exit }')"
+          test -n "$nginx_port"
+          base_url="http://127.0.0.1:${nginx_port}"
+          curl --fail --silent --show-error --retry 10 --retry-delay 2 --retry-connrefused \
+            "$base_url/" > /dev/null
+          api_status="$(curl --silent --show-error --retry 10 --retry-delay 2 --retry-connrefused \
+            --output /dev/null --write-out '%{http_code}' "$base_url/api/")"
+          case "$api_status" in
+            2??|3??|4??) ;;
+            *) echo "Unexpected /api/ status: $api_status" >&2; exit 1 ;;
+          esac
