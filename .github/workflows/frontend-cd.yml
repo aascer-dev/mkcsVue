@@ -188,8 +188,22 @@ jobs:
           fi
 
           base_url="http://127.0.0.1:${nginx_port}"
-          home_status="$(curl --silent --show-error --retry 10 --retry-all-errors --retry-delay 2 --retry-connrefused \
-            --output /dev/null --write-out '%{http_code}' "$base_url/")"
+          request_status() {
+            local url="$1"
+            local status=000
+            for attempt in $(seq 1 15); do
+              status="$(curl --silent --show-error --retry 2 --retry-all-errors --retry-delay 1 --retry-connrefused \
+                --output /dev/null --write-out '%{http_code}' "$url" || true)"
+              case "$status" in
+                2??|3??|4??) printf '%s' "$status"; return 0 ;;
+                5??|000) sleep 2 ;;
+                *) printf '%s' "$status"; return 0 ;;
+              esac
+            done
+            printf '%s' "$status"
+          }
+
+          home_status="$(request_status "$base_url/")"
           case "$home_status" in
             2??|3??) ;;
             *)
@@ -198,8 +212,7 @@ jobs:
               exit 1
               ;;
           esac
-          api_status="$(curl --silent --show-error --retry 10 --retry-all-errors --retry-delay 2 --retry-connrefused \
-            --output /dev/null --write-out '%{http_code}' "$base_url/api/")"
+          api_status="$(request_status "$base_url/api/")"
           case "$api_status" in
             2??|3??|4??) ;;
             *)
