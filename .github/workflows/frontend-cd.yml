@@ -171,6 +171,22 @@ jobs:
             echo 'Unable to determine the Compose nginx host port.' >&2
             exit 1
           fi
+
+          frontend_ready=false
+          for attempt in $(seq 1 15); do
+            if "${COMPOSE[@]}" exec -T nginx wget -q -O /dev/null http://frontend/; then
+              frontend_ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$frontend_ready" != true ]; then
+            echo 'NGINX cannot reach frontend:80.' >&2
+            "${COMPOSE[@]}" exec -T nginx wget -S -O /dev/null http://frontend/ >&2 || true
+            "${COMPOSE[@]}" logs --no-color --tail=100 nginx frontend >&2 || true
+            exit 1
+          fi
+
           base_url="http://127.0.0.1:${nginx_port}"
           home_status="$(curl --silent --show-error --retry 10 --retry-all-errors --retry-delay 2 --retry-connrefused \
             --output /dev/null --write-out '%{http_code}' "$base_url/")"
