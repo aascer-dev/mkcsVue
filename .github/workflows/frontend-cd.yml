@@ -132,11 +132,7 @@ jobs:
           FRONTEND_IMAGE="$FRONTEND_IMAGE" IMAGE_TAG="$IMAGE_TAG" \
             docker compose --env-file "$DEPLOY_ROOT/.env" \
               -f "$DEPLOY_ROOT/docker-compose.yml" up -d --no-deps frontend
-          if "${COMPOSE[@]}" config --services | grep -qx nginx; then
-            "${COMPOSE[@]}" restart nginx
-          else
-            echo "::warning::Compose has no nginx service; checking the existing host ingress instead."
-          fi
+          "${COMPOSE[@]}" up -d --no-deps nginx
 
       - name: Verify containers and endpoints
         run: |
@@ -159,31 +155,20 @@ jobs:
             exit 1
           fi
 
-          if "${COMPOSE[@]}" config --services | grep -qx nginx; then
-            nginx_id="$("${COMPOSE[@]}" ps -aq nginx)"
-            if [ -z "$nginx_id" ]; then
-              echo 'Compose nginx service has no container.' >&2
-              exit 1
-            fi
-            nginx_status="$(docker inspect -f '{{.State.Status}}' "$nginx_id")"
-            if [ "$nginx_status" != running ]; then
-              echo "Nginx container status: $nginx_status" >&2
-              "${COMPOSE[@]}" logs --no-color --tail=100 nginx >&2 || true
-              exit 1
-            fi
-            nginx_port="$("${COMPOSE[@]}" port nginx 80 | awk -F: 'NF { print $NF; exit }')"
-          else
-            nginx_port="$(awk -F= '$1 == "HTTP_PORT" { print $2 }' "$DEPLOY_ROOT/.env" | tail -n 1)"
-            nginx_port="${nginx_port:-80}"
-            if ! [[ "$nginx_port" =~ ^[0-9]+$ ]]; then
-              echo "Invalid HTTP_PORT: $nginx_port" >&2
-              exit 1
-            fi
-            echo "Using external ingress on host port $nginx_port."
+          nginx_id="$("${COMPOSE[@]}" ps -aq nginx)"
+          if [ -z "$nginx_id" ]; then
+            echo 'Compose nginx container was not created.' >&2
+            exit 1
           fi
-
+          nginx_status="$(docker inspect -f '{{.State.Status}}' "$nginx_id")"
+          if [ "$nginx_status" != running ]; then
+            echo "Nginx container status: $nginx_status" >&2
+            "${COMPOSE[@]}" logs --no-color --tail=100 nginx >&2 || true
+            exit 1
+          fi
+          nginx_port="$("${COMPOSE[@]}" port nginx 80 | awk -F: 'NF { print $NF; exit }')"
           if [ -z "$nginx_port" ]; then
-            echo 'Unable to determine the HTTP port.' >&2
+            echo 'Unable to determine the Compose nginx host port.' >&2
             exit 1
           fi
           base_url="http://127.0.0.1:${nginx_port}"
