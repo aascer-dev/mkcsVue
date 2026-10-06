@@ -122,7 +122,11 @@ yarn build
 server: {
   proxy: {
     '/api': {
-      target: 'http://localhost:8080',
+      target: env.API_PROXY_TARGET || 'http://127.0.0.1:8080',
+      changeOrigin: true
+    },
+    '/avatar': {
+      target: env.MINIO_PROXY_TARGET || 'http://127.0.0.1:9000',
       changeOrigin: true
     }
   }
@@ -132,9 +136,13 @@ server: {
 ### 环境变量
 创建 `.env.local` 文件配置本地环境变量：
 ```
-VITE_API_BASE_URL=http://localhost:8080
+VITE_API_BASE_URL=
+API_PROXY_TARGET=http://127.0.0.1:8080
+MINIO_PROXY_TARGET=http://127.0.0.1:9000
 VITE_GITHUB_CLIENT_ID=your_github_client_id
 ```
+
+生产环境 API 使用相对路径。外层网关及 `deploy/nginx.conf` 提供 `/api/` 和 `/avatar/` 代理，容器内目标分别为 `backend:8080` 与 `minio:9000`。后端 `MKCS_MINIO_PUBLIC_ENDPOINT` 填写浏览器可访问的 origin，不能填写 `http://minio:9000`。头像 URL 的 `avatarVersion` 会替换已有值，S3 签名 URL 保持原样。
 
 ## 📝 API接口
 

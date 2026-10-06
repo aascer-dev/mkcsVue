@@ -4,12 +4,18 @@ import { getUserInfo } from '@/api/user.js'
 
 const addAvatarVersion = (userInfo) => {
   const avatarUrl = userInfo?.avatarUrl
-  if (!avatarUrl || avatarUrl.startsWith('blob:')) return userInfo
+  if (!avatarUrl || avatarUrl.startsWith('blob:') || avatarUrl.startsWith('data:')) return userInfo
 
-  const separator = avatarUrl.includes('?') ? '&' : '?'
-  return {
-    ...userInfo,
-    avatarUrl: `${avatarUrl}${separator}avatarVersion=${Date.now()}`
+  try {
+    const url = new URL(avatarUrl, window.location.origin)
+    if (url.searchParams.has('X-Amz-Signature')) return userInfo
+    url.searchParams.set('avatarVersion', Date.now().toString())
+    return {
+      ...userInfo,
+      avatarUrl: url.href
+    }
+  } catch {
+    return userInfo
   }
 }
 
@@ -144,7 +150,7 @@ export const useUserStore = defineStore('user', {
       try {
         const userInfo = await getUserInfo()
         this.setUserInfo(userInfo)
-        return userInfo
+        return this.userInfo
       } catch (error) {
         console.error('刷新用户信息失败:', error)
         throw error
