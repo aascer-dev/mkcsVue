@@ -143,47 +143,35 @@ jobs:
           echo 'Compose status:'
           "${COMPOSE[@]}" ps -a
 
-          frontend_id="$("${COMPOSE[@]}" ps -aq frontend)"
+          echo 'Checking frontend container...'
+          frontend_id="$(timeout 15s "${COMPOSE[@]}" ps -aq frontend)"
           if [ -z "$frontend_id" ]; then
             echo 'Frontend container was not found in Compose.' >&2
             exit 1
           fi
-          frontend_status="$(docker inspect -f '{{.State.Status}}' "$frontend_id")"
+          frontend_status="$(timeout 15s docker inspect -f '{{.State.Status}}' "$frontend_id")"
           if [ "$frontend_status" != running ]; then
             echo "Frontend container status: $frontend_status" >&2
             "${COMPOSE[@]}" logs --no-color --tail=100 frontend >&2 || true
             exit 1
           fi
 
-          nginx_id="$("${COMPOSE[@]}" ps -aq nginx)"
+          echo 'Checking Nginx container...'
+          nginx_id="$(timeout 15s "${COMPOSE[@]}" ps -aq nginx)"
           if [ -z "$nginx_id" ]; then
             echo 'Compose nginx container was not created.' >&2
             exit 1
           fi
-          nginx_status="$(docker inspect -f '{{.State.Status}}' "$nginx_id")"
+          nginx_status="$(timeout 15s docker inspect -f '{{.State.Status}}' "$nginx_id")"
           if [ "$nginx_status" != running ]; then
             echo "Nginx container status: $nginx_status" >&2
             "${COMPOSE[@]}" logs --no-color --tail=100 nginx >&2 || true
             exit 1
           fi
-          nginx_port="$("${COMPOSE[@]}" port nginx 80 | awk -F: 'NF { print $NF; exit }')"
+          echo 'Resolving Nginx port...'
+          nginx_port="$(timeout 15s "${COMPOSE[@]}" port nginx 80 | awk -F: 'NF { print $NF; exit }')"
           if [ -z "$nginx_port" ]; then
             echo 'Unable to determine the Compose nginx host port.' >&2
-            exit 1
-          fi
-
-          frontend_ready=false
-          for attempt in $(seq 1 15); do
-            if "${COMPOSE[@]}" exec -T nginx wget -q -O /dev/null http://frontend/; then
-              frontend_ready=true
-              break
-            fi
-            sleep 2
-          done
-          if [ "$frontend_ready" != true ]; then
-            echo 'NGINX cannot reach frontend:80.' >&2
-            "${COMPOSE[@]}" exec -T nginx wget -S -O /dev/null http://frontend/ >&2 || true
-            "${COMPOSE[@]}" logs --no-color --tail=100 nginx frontend >&2 || true
             exit 1
           fi
 
@@ -191,9 +179,10 @@ jobs:
           request_status() {
             local url="$1"
             local status=000
-            for attempt in $(seq 1 15); do
-              status="$(curl --silent --show-error --retry 2 --retry-all-errors --retry-delay 1 --retry-connrefused \
+            for attempt in $(seq 1 10); do
+              status="$(curl --noproxy '*' --silent --show-error --connect-timeout 2 --max-time 5 \
                 --output /dev/null --write-out '%{http_code}' "$url" || true)"
+              echo "Probe $url: attempt $attempt returned $status" >&2
               case "$status" in
                 2??|3??|4??) printf '%s' "$status"; return 0 ;;
                 5??|000) sleep 2 ;;
@@ -203,21 +192,23 @@ jobs:
             printf '%s' "$status"
           }
 
+          echo 'Checking homepage through Nginx...'
           home_status="$(request_status "$base_url/")"
           case "$home_status" in
             2??|3??) ;;
             *)
               echo "Unexpected homepage status: $home_status" >&2
-              "${COMPOSE[@]}" logs --no-color --tail=100 nginx frontend >&2 || true
+              timeout 15s "${COMPOSE[@]}" logs --no-color --tail=100 nginx frontend >&2 || true
               exit 1
               ;;
           esac
+          echo 'Checking API through Nginx...'
           api_status="$(request_status "$base_url/api/")"
           case "$api_status" in
             2??|3??|4??) ;;
             *)
               echo "Unexpected /api/ status: $api_status" >&2
-              "${COMPOSE[@]}" logs --no-color --tail=100 nginx backend >&2 || true
+              timeout 15s "${COMPOSE[@]}" logs --no-color --tail=100 nginx backend >&2 || true
               exit 1
               ;;
           esac
